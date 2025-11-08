@@ -1,0 +1,206 @@
+// Prisma Schema for Sales Optimizer Platform
+// Database: PostgreSQL (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  description   String?
+  price         Float
+  stock         Int
+  rotation      Rotation @default(LOW)
+
+  // Metrics
+  views         Int      @default(0)
+  ctr           Float    @default(0) // Click-through rate
+  cr            Float    @default(0) // Conversion rate
+  ageDays       Int      @default(0) // Days in inventory
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  channels         ProductChannel[]
+  recommendations  Recommendation[]
+
+  @@index([sku])
+  @@index([rotation])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model Channel {
+  id            String        @id @default(cuid())
+  type          ChannelType
+  name          String
+  status        ChannelStatus @default(DISCONNECTED)
+
+  // Encrypted credentials stored as JSON
+  credentials   Json?
+
+  lastSync      DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  products      ProductChannel[]
+  syncJobs      SyncJob[]
+
+  @@index([type])
+  @@index([status])
+  @@map("channels")
+}
+
+model ProductChannel {
+  id            String   @id @default(cuid())
+  productId     String
+  channelId     String
+  externalId    String   // Platform's product ID
+  status        String   @default("active")
+  lastSynced    DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  channel       Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, channelId])
+  @@index([productId])
+  @@index([channelId])
+  @@map("product_channels")
+}
+
+model Recommendation {
+  id            String               @id @default(cuid())
+  productId     String
+  type          RecommendationType
+  title         String
+  summary       String
+
+  // Scoring
+  impact        Float                // 0-1 (expected impact)
+  effort        Float                // 0-1 (implementation effort)
+  confidence    Float                // 0-1 (confidence score)
+
+  status        RecommendationStatus @default(PENDING)
+
+  // Structured recommendation data (varies by type)
+  proposal      Json
+
+  reasoning     String?              // AI reasoning
+
+  createdAt     DateTime             @default(now())
+  appliedAt     DateTime?
+  updatedAt     DateTime             @updatedAt
+
+  // Relations
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("recommendations")
+}
+
+model SyncJob {
+  id              String    @id @default(cuid())
+  channelId       String
+  status          JobStatus @default(QUEUED)
+  type            SyncType  @default(FULL)
+
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  error           String?
+  itemsProcessed  Int       @default(0)
+  itemsTotal      Int       @default(0)
+
+  // Relations
+  channel         Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("sync_jobs")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum ChannelType {
+  SHOPIFY
+  WOOCOMMERCE
+  EBAY
+}
+
+enum ChannelStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  SYNCING
+}
+
+enum Rotation {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RecommendationType {
+  PRICE_CHANGE
+  PROMOTION
+  BUNDLE
+  TITLE_OPTIMIZATION
+  IMAGE_UPDATE
+  CHANNEL_DISTRIBUTION
+}
+
+enum RecommendationStatus {
+  PENDING
+  APPLIED
+  REJECTED
+  EXPIRED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SyncType {
+  FULL
+  INCREMENTAL
+  WEBHOOK
+}
