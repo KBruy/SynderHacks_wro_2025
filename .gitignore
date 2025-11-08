@@ -1,95 +1,44 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
-*.lcov
-.nyc_output
-
-# Production builds
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
 dist/
 build/
-.next/
-out/
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-logs/
-*.log
+# Node
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-pnpm-debug.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
 
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-*~
-
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-*.sublime-project
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
-.parcel-cache/
-.sass-cache/
+# OS
+.DS_Store
+Thumbs.db
 
 # Database
 *.sqlite
-*.sqlite3
 *.db
 
-# Prisma
+# Environment
 .env
-prisma/.env
+.env.local
 
-# Redis dump
-dump.rdb
-
-# Misc
-.turbo
-.vercel
-.netlify
-
-# TypeScript
-*.tsbuildinfo
-
-# Next.js
-.next/
-out/
-
-# Vite
-.vite/
-
-# Local history
-.history/
-
-# Sentry
-.sentryclirc
+# Logs
+*.log
+logs/
