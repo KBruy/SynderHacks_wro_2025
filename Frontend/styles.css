@@ -1,0 +1,146 @@
+:root{
+  --bg: #0b0f1a;
+  --bg-soft: #111727;
+  --border: #222a3d;
+  --txt: #e6e9f2;
+  --muted: #9aa4bf;
+  --accent: #5b9cff;
+  --accent-2: #8be6c9;
+
+  --sidebar-w: 280px;
+  --radius: 14px;
+  --gap: 16px;
+}
+*{ box-sizing: border-box; }
+html,body{ height: 100%; }
+body{
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--txt);
+  background: radial-gradient(1200px 800px at 20% -10%, #14203b 0%, #0b0f1a 40%, #080c14 100%);
+  line-height: 1.45;
+}
+/* Topbar */
+.topbar{
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 20px;
+  background: rgba(11,15,26,0.6);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar__title{ font-weight: 700; letter-spacing: .2px; }
+.topbar__nav a{ color: var(--muted); text-decoration: none; margin-left: 16px; }
+.topbar__nav a[aria-current="page"]{ color: var(--accent); font-weight: 600; }
+/* Layout */
+.layout{
+  min-height: calc(100svh - 56px - 64px);
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+}
+/* Sidebar */
+.sidebar{
+  position: sticky; top: 56px; align-self: start;
+  height: calc(100dvh - 56px);
+  padding: 20px 14px;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(17,23,39,0.9), rgba(17,23,39,0.6));
+  display: flex; flex-direction: column; gap: 16px;
+}
+.sidebar__brand{
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(0,0,0,0.2);
+}
+.logo{ font-size: 18px; }
+.brand{ font-weight: 700; }
+
+.menu{ display: grid; gap: 8px; }
+.menu__item{
+  display: block;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--txt);
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform .06s ease, border-color .15s ease, background .15s ease;
+}
+.menu__item:hover{ transform: translateY(-1px); border-color: #2f3952; }
+.menu__item.is-active{
+  border-color: color-mix(in oklab, var(--accent) 60%, var(--border));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.sidebar__footer{ margin-top: auto; color: var(--muted); }
+/* Content */
+.content{
+  padding: 24px;
+  display: grid; gap: 20px;
+}
+.card{
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(17,23,39,.75), rgba(17,23,39,.5));
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.card h1, .card h2{ margin: 0 0 8px; }
+
+.grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: var(--gap);
+  margin-top: 12px;
+}
+.tile{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(0,0,0,0.25);
+  display: grid; gap: 8px;
+}
+.btn{
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  text-decoration: none;
+  color: var(--txt);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 35%, transparent), transparent);
+}
+.btn:hover{ filter: brightness(1.06); }
+
+.events{ list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.events li{
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+}
+.events time{
+  display: inline-block; min-width: 56px; margin-right: 8px;
+  color: var(--accent-2); font-weight: 600;
+}
+/* Footer */
+.footer{
+  padding: 18px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  background: rgba(11,15,26,0.5);
+  text-align: center;
+}
+/* Responsive */
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px){
+  .layout{ grid-template-columns: 1fr; }
+  .sidebar{
+    position: relative; top: 0; height: auto;
+    border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .grid{ grid-template-columns: 1fr; }
+  .topbar__nav{ display: none; }
+}
