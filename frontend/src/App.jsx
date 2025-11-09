@@ -6,8 +6,10 @@ import HistoryPanel from './components/HistoryPanel';
 import ConnectionsPanel from './components/ConnectionsPanel';
 import Notification from './components/Notification';
 import ProductDetailModal from './components/ProductDetailModal';
+import { useTranslation } from './i18n/LanguageContext';
 
 function App() {
+  const { t, language, toggleLanguage } = useTranslation();
   const [activeTab, setActiveTab] = useState('products');
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -66,10 +68,13 @@ function App() {
     setGeneratingSuggestions(true);
     try {
       const result = await api.generateSuggestionsForAll();
+      const message = t('notifSuggestionsGeneratedMsg')
+        .replace('{analyzed}', result.products_analyzed)
+        .replace('{created}', result.total_suggestions_created);
       setNotification({
         type: 'success',
-        title: 'Sugestie wygenerowane!',
-        message: `Przeanalizowano ${result.products_analyzed} produktów i utworzono ${result.total_suggestions_created} sugestii.`,
+        title: t('notifSuggestionsGenerated'),
+        message: message,
       });
       // Refresh to show new suggestions
       if (selectedProduct) {
@@ -78,8 +83,8 @@ function App() {
     } catch (err) {
       setNotification({
         type: 'error',
-        title: 'Błąd',
-        message: `Nie udało się wygenerować sugestii: ${err.message}`,
+        title: t('notifError'),
+        message: `${t('notifSuggestionsError')}: ${err.message}`,
       });
     } finally {
       setGeneratingSuggestions(false);
@@ -89,8 +94,23 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Product Suggestions Manager</h1>
-        <p>Zarządzaj produktami i optymalizuj sprzedaż dzięki inteligentnym sugestiom</p>
+        <div>
+          <h1>{t('appTitle')}</h1>
+          <p>{t('appSubtitle')}</p>
+        </div>
+        <button
+          onClick={toggleLanguage}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            background: 'white'
+          }}
+        >
+          {language === 'pl' ? '🇬🇧 English' : '🇵🇱 Polski'}
+        </button>
       </header>
 
       <div className="tabs">
@@ -98,13 +118,13 @@ function App() {
           className={`tab ${activeTab === 'products' ? 'active' : ''}`}
           onClick={() => setActiveTab('products')}
         >
-          Produkty i Sugestie
+          {t('tabProducts')}
         </button>
         <button
           className={`tab ${activeTab === 'connections' ? 'active' : ''}`}
           onClick={() => setActiveTab('connections')}
         >
-          Połączenia ze sklepami
+          {t('tabConnections')}
         </button>
       </div>
 
@@ -117,7 +137,7 @@ function App() {
           <div className="main-content">
             <div className="products-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 className="section-title" style={{ margin: 0 }}>Lista produktów</h2>
+                <h2 className="section-title" style={{ margin: 0 }}>{t('productsSectionTitle')}</h2>
                 {products.length > 0 && (
                   <button
                     className="btn-primary"
@@ -125,22 +145,22 @@ function App() {
                     disabled={generatingSuggestions}
                     style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
                   >
-                    {generatingSuggestions ? '🔄 Generowanie...' : '🤖 Generuj sugestie AI'}
+                    {generatingSuggestions ? t('btnGenerating') : t('btnGenerateAI')}
                   </button>
                 )}
               </div>
 
-              {loading && <div className="loading">Ładowanie produktów</div>}
+              {loading && <div className="loading">{t('productsLoading')}</div>}
 
               {error && (
                 <div className="error">
-                  Błąd ładowania produktów: {error}
+                  {t('productsError')}: {error}
                 </div>
               )}
 
               {!loading && !error && products.length === 0 && (
                 <div className="empty-state">
-                  Brak produktów w bazie danych. Dodaj połączenie ze sklepem i zsynchronizuj produkty.
+                  {t('productsEmpty')}
                 </div>
               )}
 

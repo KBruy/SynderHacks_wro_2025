@@ -212,7 +212,7 @@ class ShopifyIntegration(StoreIntegration):
                 'external_id': str(variant['id']),
                 'sku': variant.get('sku', f"SHOPIFY-{variant['id']}"),
                 'name': created_product['title'],
-                'price': float(variant['price']),
+                'price': float(product_data['price']),  # Use the price we sent, not what Shopify returns
                 'stock': int(variant.get('inventory_quantity', 0)),
                 'status': 'active',
                 'channel': 'shopify',

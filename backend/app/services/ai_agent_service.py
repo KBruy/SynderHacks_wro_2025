@@ -56,56 +56,57 @@ def analyze_product_with_ai(product: Dict, market_data: List[Dict], all_shop_pro
 
         # Format shop products for prompt
         shop_products_text = "\n".join([
-            f"- ID: {p['id']}, Nazwa: {p['name']}, Cena: {p['price']} PLN, Stan: {p['stock']} szt"
+            f"- ID: {p['id']}, Name: {p['name']}, Price: {p['price']} PLN, Stock: {p['stock']} units"
             for p in all_shop_products if p['id'] != product['id']
         ])
 
-        # Prepare prompt
-        prompt = f"""Jesteś ekspertem od e-commerce i strategii cenowej.
+        # Prepare prompt (all in English for consistency)
+        prompt = f"""You are an e-commerce and pricing strategy expert.
 
-PRODUKT DO ANALIZY (NASZ SKLEP SHOPIFY):
+PRODUCT TO ANALYZE (OUR SHOPIFY STORE):
 - ID: {product['id']}
-- Nazwa: {product['name']}
-- Cena: {product['price']} PLN
-- Stan magazynowy: {product['stock']} sztuk
+- Name: {product['name']}
+- Price: {product['price']} PLN
+- Stock: {product['stock']} units
 
-POZOSTAŁE PRODUKTY W NASZYM SKLEPIE SHOPIFY:
+OTHER PRODUCTS IN OUR SHOPIFY STORE:
 {shop_products_text}
 
-DANE RYNKOWE DO ANALIZY (DummyJSON - tylko do porównania, NIE nasze produkty):
+MARKET DATA FOR ANALYSIS (DummyJSON - for comparison only, NOT our products):
 {json.dumps(market_data[:5], indent=2, ensure_ascii=False)}
 
-ZADANIE:
-Wygeneruj maksymalnie 2-3 sugestie dla produktu ID {product['id']}:
-1. Optymalizacja ceny (price) - porównaj z rynkiem
-2. Promocja (promo) - połącz z INNYM produktem z naszego sklepu (podaj jego ID)
-3. Bundle (bundle) - połącz 2-3 produkty z naszego sklepu (podaj ich ID)
+TASK:
+Generate maximum 2-3 suggestions for product ID {product['id']}:
+1. Price optimization (price) - compare with market prices
+2. Promotion (promo) - combine with ANOTHER product from our store (provide its ID)
+3. Bundle (bundle) - combine 2-3 products from our store (provide their IDs)
 
-KRYTYCZNIE WAŻNE:
-- WSZYSTKIE sugestie dotyczą TYLKO produktów z naszego sklepu Shopify!
-- W bundle/promo używaj TYLKO ID produktów z sekcji "POZOSTAŁE PRODUKTY W NASZYM SKLEPIE"
-- NIE używaj produktów z DummyJSON - to tylko dane do analizy rynku!
-- Bundle musi zawierać 2-3 produkty z naszego sklepu (podaj konkretne ID)
-- Promo może łączyć 2 produkty (1+1, podaj konkretne ID)
+CRITICALLY IMPORTANT:
+- ALL suggestions concern ONLY products from our Shopify store!
+- In bundle/promo use ONLY IDs of products from "OTHER PRODUCTS IN OUR STORE" section
+- DO NOT use products from DummyJSON - that's only for market analysis!
+- Bundle must contain 2-3 products from our store (provide specific IDs)
+- Promo can combine 2 products (1+1, provide specific IDs)
+- Write ALL descriptions and reasoning in ENGLISH language!
 
-Odpowiedz TYLKO w formacie JSON:
+Respond ONLY in JSON format (all text in English):
 {{
   "suggestions": [
     {{
       "type": "price|promo|bundle",
-      "description": "Konkretna sugestia z wartościami i ID produktów z NASZEGO sklepu",
-      "reasoning": "Uzasadnienie biznesowe",
-      "product_ids": [lista ID produktów z naszego sklepu, jeśli bundle/promo]
+      "description": "Specific suggestion with values and product IDs from OUR store (in English)",
+      "reasoning": "Business justification (in English)",
+      "product_ids": [list of product IDs from our store, if bundle/promo]
     }}
   ],
-  "market_position": "Analiza pozycji rynkowej"
+  "market_position": "Market position analysis (in English)"
 }}"""
 
         # Call OpenAI
         response = ai_client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "Jesteś ekspertem e-commerce specjalizującym się w optymalizacji cen i strategiach sprzedaży."},
+                {"role": "system", "content": "You are an e-commerce expert specializing in pricing optimization and sales strategies."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -207,7 +208,7 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
                 ''', (
                     product_id,
                     suggestion['type'],
-                    f"{suggestion['description']} | Uzasadnienie: {suggestion['reasoning']}",
+                    f"{suggestion['description']} | Reasoning: {suggestion['reasoning']}",
                     product_ids_json
                 ))
                 suggestions_created += 1

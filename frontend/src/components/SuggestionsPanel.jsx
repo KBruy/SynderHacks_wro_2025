@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function SuggestionsPanel({ product, onApplied }) {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,13 +45,13 @@ export default function SuggestionsPanel({ product, onApplied }) {
 
       onApplied({
         type: 'success',
-        title: 'Sukces!',
+        title: t('notifSuccess'),
         message: result.message,
       });
     } catch (err) {
       onApplied({
         type: 'error',
-        title: 'Błąd',
+        title: t('notifError'),
         message: err.message,
       });
     } finally {
@@ -59,9 +61,9 @@ export default function SuggestionsPanel({ product, onApplied }) {
 
   const getSuggestionTypeLabel = (type) => {
     const labels = {
-      price: 'Cena',
-      promo: 'Promocja',
-      bundle: 'Bundle',
+      price: t('suggestionTypePrice'),
+      promo: t('suggestionTypePromo'),
+      bundle: t('suggestionTypeBundle'),
     };
     return labels[type] || type;
   };
@@ -69,9 +71,9 @@ export default function SuggestionsPanel({ product, onApplied }) {
   if (!product) {
     return (
       <div className="suggestions-panel">
-        <h3>Sugestie</h3>
+        <h3>{t('suggestionsTitle')}</h3>
         <div className="empty-state">
-          Wybierz produkt, aby zobaczyć sugestie
+          {t('suggestionsSelectProduct')}
         </div>
       </div>
     );
@@ -79,14 +81,14 @@ export default function SuggestionsPanel({ product, onApplied }) {
 
   return (
     <div className="suggestions-panel">
-      <h3>Sugestie dla: {product.name}</h3>
+      <h3>{t('suggestionsForProduct')}: {product.name}</h3>
 
-      {loading && <div className="loading">Ładowanie</div>}
+      {loading && <div className="loading">{t('suggestionsLoading')}</div>}
 
-      {error && <div className="error">Błąd: {error}</div>}
+      {error && <div className="error">{t('suggestionsError')}: {error}</div>}
 
       {!loading && !error && suggestions.length === 0 && (
-        <div className="empty-state">Brak sugestii dla tego produktu</div>
+        <div className="empty-state">{t('suggestionsEmpty')}</div>
       )}
 
       {!loading && !error && suggestions.length > 0 && (
@@ -101,7 +103,7 @@ export default function SuggestionsPanel({ product, onApplied }) {
                   {getSuggestionTypeLabel(suggestion.type)}
                 </span>
                 <span className={`suggestion-status ${suggestion.status}`}>
-                  {suggestion.status === 'new' ? 'Nowa' : 'Zastosowana'}
+                  {suggestion.status === 'new' ? t('suggestionStatusNew') : t('suggestionStatusApplied')}
                 </span>
               </div>
 
@@ -115,13 +117,13 @@ export default function SuggestionsPanel({ product, onApplied }) {
                   onClick={() => handleApply(suggestion)}
                   disabled={applying === suggestion.id}
                 >
-                  {applying === suggestion.id ? 'Stosowanie...' : 'Zastosuj sugestię'}
+                  {applying === suggestion.id ? t('btnApplying') : t('btnApply')}
                 </button>
               )}
 
               {suggestion.status === 'applied' && suggestion.applied_at && (
                 <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '8px' }}>
-                  Zastosowano: {new Date(suggestion.applied_at).toLocaleString('pl-PL')}
+                  {t('suggestionAppliedAt')}: {new Date(suggestion.applied_at).toLocaleString('pl-PL')}
                 </div>
               )}
             </div>

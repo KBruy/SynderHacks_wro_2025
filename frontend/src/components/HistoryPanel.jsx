@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function HistoryPanel({ refreshTrigger }) {
+  const { t } = useTranslation();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -40,14 +42,14 @@ export default function HistoryPanel({ refreshTrigger }) {
 
   return (
     <div className="history-panel">
-      <h3>Historia zdarzeń</h3>
+      <h3>{t('historyTitle')}</h3>
 
-      {loading && <div className="loading">Ładowanie</div>}
+      {loading && <div className="loading">{t('historyLoading')}</div>}
 
-      {error && <div className="error">Błąd: {error}</div>}
+      {error && <div className="error">{t('historyError')}: {error}</div>}
 
       {!loading && !error && events.length === 0 && (
-        <div className="empty-state">Brak zdarzeń w historii</div>
+        <div className="empty-state">{t('historyEmpty')}</div>
       )}
 
       {!loading && !error && events.length > 0 && (

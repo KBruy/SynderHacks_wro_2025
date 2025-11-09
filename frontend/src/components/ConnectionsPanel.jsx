@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function ConnectionsPanel({ onConnectionChange }) {
+  const { t } = useTranslation();
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -53,14 +55,14 @@ export default function ConnectionsPanel({ onConnectionChange }) {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Czy na pewno chcesz usunąć to połączenie?')) return;
+    if (!confirm(t('connectionDeleteConfirm'))) return;
 
     try {
       await api.deleteConnection(id);
       await loadConnections();
       if (onConnectionChange) onConnectionChange();
     } catch (err) {
-      alert('Błąd usuwania połączenia: ' + err.message);
+      alert(t('connectionDeleteError') + ': ' + err.message);
     }
   };
 
@@ -72,7 +74,7 @@ export default function ConnectionsPanel({ onConnectionChange }) {
       await loadConnections();
       if (onConnectionChange) onConnectionChange();
     } catch (err) {
-      alert('Błąd synchronizacji: ' + err.message);
+      alert(t('connectionSyncError') + ': ' + err.message);
     } finally {
       setSyncing(null);
     }
@@ -82,38 +84,38 @@ export default function ConnectionsPanel({ onConnectionChange }) {
   return (
     <div className="connections-panel">
       <div className="panel-header">
-        <h2>Połączenia ze sklepami</h2>
+        <h2>{t('connectionsTitle')}</h2>
         <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Anuluj' : '+ Dodaj połączenie'}
+          {showForm ? t('btnCancel') : t('btnAddConnection')}
         </button>
       </div>
 
       {showForm && (
         <form className="connection-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nazwa połączenia</label>
+            <label>{t('connectionName')}</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              placeholder="np. Mój sklep WooCommerce"
+              placeholder="e.g., My WooCommerce Store"
               required
             />
           </div>
 
           <div className="form-group">
-            <label>Platforma</label>
+            <label>{t('connectionPlatform')}</label>
             <select
               value={formData.platform}
               onChange={(e) => setFormData({...formData, platform: e.target.value})}
             >
-              <option value="woocommerce">WooCommerce</option>
-              <option value="shopify">Shopify</option>
+              <option value="woocommerce">{t('connectionPlatformWoo')}</option>
+              <option value="shopify">{t('connectionPlatformShopify')}</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label>URL sklepu</label>
+            <label>{t('connectionUrl')}</label>
             <input
               type={formData.platform === 'shopify' ? 'text' : 'url'}
               value={formData.store_url}
@@ -123,15 +125,15 @@ export default function ConnectionsPanel({ onConnectionChange }) {
             />
             <small>
               {formData.platform === 'shopify'
-                ? 'Format: myshop.myshopify.com (bez https://)'
-                : 'Pełny URL sklepu'
+                ? t('connectionUrlHintShopify')
+                : t('connectionUrlHintWoo')
               }
             </small>
           </div>
 
           <div className="form-group">
             <label>
-              {formData.platform === 'shopify' ? 'Access Token' : 'Consumer Key'}
+              {formData.platform === 'shopify' ? t('connectionApiKey') : t('connectionConsumerKey')}
             </label>
             <input
               type="text"
@@ -144,7 +146,7 @@ export default function ConnectionsPanel({ onConnectionChange }) {
 
           {formData.platform === 'woocommerce' && (
             <div className="form-group">
-              <label>Consumer Secret</label>
+              <label>{t('connectionConsumerSecret')}</label>
               <input
                 type="password"
                 value={formData.api_secret}
@@ -157,14 +159,14 @@ export default function ConnectionsPanel({ onConnectionChange }) {
 
           {formError && <div className="error">{formError}</div>}
 
-          <button type="submit" className="btn-primary">Dodaj i przetestuj połączenie</button>
+          <button type="submit" className="btn-primary">{t('connectionBtnSubmit')}</button>
         </form>
       )}
 
       {loading ? (
-        <div className="loading">Ładowanie połączeń</div>
+        <div className="loading">{t('connectionsLoading')}</div>
       ) : connections.length === 0 ? (
-        <div className="empty-state">Brak połączeń. Dodaj pierwszy sklep!</div>
+        <div className="empty-state">{t('connectionsEmpty')}</div>
       ) : (
         <div className="connections-list">
           {connections.map((conn) => (
@@ -177,14 +179,14 @@ export default function ConnectionsPanel({ onConnectionChange }) {
                   </span>
                 </div>
                 <span className={`status-indicator ${conn.is_active ? 'active' : 'inactive'}`}>
-                  {conn.is_active ? 'Aktywne' : 'Nieaktywne'}
+                  {conn.is_active ? t('connectionActive') : t('connectionInactive')}
                 </span>
               </div>
 
               <div className="connection-info">
                 <div><strong>URL:</strong> {conn.store_url}</div>
                 {conn.last_sync && (
-                  <div><strong>Ostatnia sync:</strong> {new Date(conn.last_sync).toLocaleString('pl-PL')}</div>
+                  <div><strong>{t('connectionLastSync')}:</strong> {new Date(conn.last_sync).toLocaleString('pl-PL')}</div>
                 )}
               </div>
 
@@ -194,13 +196,13 @@ export default function ConnectionsPanel({ onConnectionChange }) {
                   onClick={() => handleSync(conn.id)}
                   disabled={!conn.is_active || syncing === conn.id}
                 >
-                  {syncing === conn.id ? 'Synchronizacja...' : 'Synchronizuj'}
+                  {syncing === conn.id ? t('btnSyncing') : t('btnSync')}
                 </button>
                 <button
                   className="btn-danger"
                   onClick={() => handleDelete(conn.id)}
                 >
-                  Usuń
+                  {t('btnDelete')}
                 </button>
               </div>
             </div>

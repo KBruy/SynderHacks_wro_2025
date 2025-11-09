@@ -1,15 +1,19 @@
+import { useTranslation } from '../i18n/LanguageContext';
+
 export default function ProductsTable({ products, selectedProduct, onSelectProduct, onShowDetails }) {
+  const { t } = useTranslation();
+
   return (
     <table className="products-table">
       <thead>
         <tr>
-          <th>SKU</th>
-          <th>Nazwa produktu</th>
-          <th>Cena</th>
-          <th>Nakład</th>
-          <th>Status</th>
-          <th>Kanał</th>
-          <th>Aktywne promocje</th>
+          <th>{t('productsSku')}</th>
+          <th>{t('productsName')}</th>
+          <th>{t('productsPrice')}</th>
+          <th>{t('productsStock')}</th>
+          <th>{t('productsStatus')}</th>
+          <th>{t('productsChannel')}</th>
+          <th>{t('productsPromo')}</th>
         </tr>
       </thead>
       <tbody>
@@ -39,7 +43,7 @@ export default function ProductsTable({ products, selectedProduct, onSelectProdu
             </td>
             <td>
               <span className={`status-badge ${product.status}`}>
-                {product.status === 'active' ? 'Aktywny' : 'Niski stan'}
+                {product.status === 'active' ? t('modalStatusActive') : t('modalStatusLowStock')}
               </span>
             </td>
             <td>
@@ -56,7 +60,9 @@ export default function ProductsTable({ products, selectedProduct, onSelectProdu
                       {promo.type === 'promo' && '🎉'}
                       {promo.type === 'bundle' && '📦'}
                       {' '}
-                      {promo.type}
+                      {promo.type === 'price' && t('suggestionTypePrice')}
+                      {promo.type === 'promo' && t('suggestionTypePromo')}
+                      {promo.type === 'bundle' && t('suggestionTypeBundle')}
                     </span>
                   ))}
                 </div>
