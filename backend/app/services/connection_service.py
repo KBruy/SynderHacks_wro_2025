@@ -184,6 +184,51 @@ def quick_demo_setup() -> List[int]:
     raise ValueError('Demo mode is no longer supported. Please create real store connections with valid API credentials.')
 
 
+def get_integration_for_product(product_id: int):
+    """
+    Get integration instance for a product's store connection.
+
+    Args:
+        product_id: Product ID.
+
+    Returns:
+        Integration instance (ShopifyIntegration or WooCommerceIntegration).
+
+    Raises:
+        ValueError: If product or connection not found, or connection inactive.
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get product and connection details
+        cursor.execute('''
+            SELECT p.connection_id, p.channel,
+                   sc.platform, sc.store_url, sc.api_key_encrypted, sc.api_secret_encrypted, sc.is_active
+            FROM products p
+            LEFT JOIN store_connections sc ON p.connection_id = sc.id
+            WHERE p.id = ?
+        ''', (product_id,))
+
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Product {product_id} not found")
+
+        connection_id, channel, platform, store_url, api_key_encrypted, api_secret_encrypted, is_active = row
+
+        if not connection_id:
+            raise ValueError(f"Product {product_id} has no store connection")
+
+        if not is_active:
+            raise ValueError(f"Store connection for product {product_id} is inactive")
+
+        # Decrypt credentials
+        api_key = decrypt(api_key_encrypted)
+        api_secret = decrypt(api_secret_encrypted) if api_secret_encrypted else None
+
+        # Create integration
+        return _create_integration(platform, store_url, api_key, api_secret, is_demo=False)
+
+
 def _create_integration(platform: str, store_url: str, api_key: str,
                         api_secret: str = None, is_demo: bool = False):
     """

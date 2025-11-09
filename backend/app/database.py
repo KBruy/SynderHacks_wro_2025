@@ -2,7 +2,9 @@ import sqlite3
 import json
 from datetime import datetime
 from contextlib import contextmanager
+from utils.logger import get_logger
 
+logger = get_logger(__name__)
 DATABASE_PATH = '/data/db.sqlite'
 
 @contextmanager
@@ -36,11 +38,24 @@ def init_db():
                 channel TEXT NOT NULL,
                 connection_id INTEGER,
                 external_id TEXT,
+                vendor TEXT,
+                product_type TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (connection_id) REFERENCES store_connections (id)
             )
         ''')
+
+        # Add vendor and product_type columns if they don't exist (migration)
+        try:
+            cursor.execute('ALTER TABLE products ADD COLUMN vendor TEXT')
+        except:
+            pass  # Column already exists
+
+        try:
+            cursor.execute('ALTER TABLE products ADD COLUMN product_type TEXT')
+        except:
+            pass  # Column already exists
 
         # Suggestions table
         cursor.execute('''
@@ -50,11 +65,18 @@ def init_db():
                 type TEXT NOT NULL,
                 description TEXT NOT NULL,
                 status TEXT DEFAULT 'new',
+                related_product_ids TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 applied_at TEXT,
                 FOREIGN KEY (product_id) REFERENCES products (id)
             )
         ''')
+
+        # Add related_product_ids column if it doesn't exist (migration)
+        try:
+            cursor.execute('ALTER TABLE suggestions ADD COLUMN related_product_ids TEXT')
+        except:
+            pass  # Column already exists
 
         # Events table (history)
         cursor.execute('''
@@ -142,6 +164,13 @@ def init_db():
         ''')
 
 def seed_data():
-    """Seed database with initial data - DISABLED, using only real Shopify data"""
-    # No mock data - only sync from real stores
-    pass
+    """Clear products and suggestions on startup - fresh start every time"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Clear all products (cascade will delete related suggestions and events)
+        cursor.execute('DELETE FROM products')
+        cursor.execute('DELETE FROM suggestions')
+        cursor.execute('DELETE FROM events WHERE product_id IS NOT NULL')
+
+        logger.info("Cleared all products and suggestions - ready for fresh sync from Shopify")

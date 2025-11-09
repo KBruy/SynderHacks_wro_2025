@@ -151,6 +151,62 @@ def api_get_product_details(product_id: int):
     return jsonify(product), 200
 
 
+@app.route('/api/products', methods=['POST'])
+def api_create_product():
+    """
+    Create a new product in connected store (Shopify/WooCommerce).
+
+    Body JSON:
+        connection_id: int - ID of the store connection
+        name: str - Product name
+        price: float - Product price
+        stock: int - Initial stock quantity (optional)
+        sku: str - SKU (optional)
+        description: str - Product description (optional)
+
+    Returns:
+        JSON with created product or 400/500 on error.
+    """
+    try:
+        data = request.json
+        from services.product_service import create_product_in_store
+        result = create_product_in_store(data)
+        return jsonify(result), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating product: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/products/<int:product_id>', methods=['PUT'])
+def api_update_product(product_id: int):
+    """
+    Update product in connected store (Shopify/WooCommerce).
+
+    Args:
+        product_id: Product ID from URL path.
+
+    Body JSON (all optional):
+        price: float - New price
+        stock: int - New stock quantity
+        sku: str - New SKU
+
+    Returns:
+        JSON with success status or 400/404/500 on error.
+    """
+    try:
+        data = request.json
+        from services.product_service import update_product_in_store
+        result = update_product_in_store(product_id, data)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating product: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ========== Suggestion Endpoints ==========
 
 @app.route('/api/suggestions', methods=['GET'])

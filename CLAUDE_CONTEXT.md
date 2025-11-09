@@ -1,27 +1,29 @@
 # Claude Context - Product Suggestions Manager
 
-> **Dla osób pracujących z Claude**: Ten plik zawiera pełny kontekst projektu, kluczowe decyzje architektoniczne i stan implementacji.
+> **Dla osób pracujących z Claude**: Ten plik zawiera pełny kontekst projektu, kluczowe decyzje architektoniczne i aktualny stan implementacji.
 
 ## 🎯 Cel Projektu
 
-System zarządzania produktami e-commerce z automatycznymi sugestiami optymalizacji (cena, promocje, bundle). Demo aplikacja dla hackathonu.
+System zarządzania produktami e-commerce z **automatycznymi sugestiami AI** do optymalizacji (cena, promocje, bundle). Integracja z Shopify, analiza rynku przez DummyJSON API, generowanie sugestii przez OpenAI GPT-4o-mini.
 
 ## 🏗️ Architektura
 
 ### Backend (Python/Flask)
-- **Port**: 5001 (zmieniony z 5000 przez konflikt)
-- **Baza danych**: SQLite z volume Docker `/data/products.db`
+- **Port**: 5001
+- **Baza danych**: SQLite z volume Docker `/data/db.sqlite`
+- **AI Engine**: OpenAI GPT-4o-mini
+- **Market Data**: DummyJSON API (tylko do analizy, NIE do rekomendacji)
 - **Bezpieczeństwo**: Credentials szyfrowane AES (cryptography + PBKDF2HMAC)
 
 ### Frontend (React/Vite)
-- **Port**: 5173
-- **Styling**: Vanilla CSS (bez bibliotek)
+- **Port**: 3000
+- **Styling**: Tailwind CSS / Vanilla CSS
 - **State**: React hooks (useState, useEffect)
 
 ### Integracje
-- WooCommerce REST API v3
-- Shopify Admin API 2024-01
-- **Mock mode** dla testów bez prawdziwych sklepów
+- **Shopify Admin API 2024-01** (główna integracja)
+- **OpenAI API** (GPT-4o-mini dla sugestii)
+- **DummyJSON API** (dane rynkowe do analizy)
 
 ## 📊 Schema Bazy Danych
 
@@ -30,20 +32,19 @@ System zarządzania produktami e-commerce z automatycznymi sugestiami optymaliza
 ```sql
 products (
   id, sku, name, price, stock, status, channel,
-  connection_id, external_id, created_at, updated_at
+  connection_id, external_id,
+  vendor TEXT,                    -- Shopify vendor
+  product_type TEXT,              -- NULL | 'bundle' | 'promotion'
+  created_at, updated_at
 )
 
 suggestions (
-  id, product_id, type [price|promo|bundle],
-  description, status [new|applied], applied_at
-)
-
-bundles (
-  id, name, sku, price, channel, connection_id, is_active
-)
-
-bundle_items (
-  id, bundle_id, product_id, quantity
+  id, product_id,
+  type TEXT,                      -- 'price' | 'promo' | 'bundle'
+  description TEXT,
+  status TEXT,                    -- 'new' | 'applied'
+  related_product_ids TEXT,       -- JSON array [29, 30, 31]
+  created_at, applied_at
 )
 
 events (
@@ -53,252 +54,428 @@ events (
 
 store_connections (
   id, name, platform, store_url,
-  api_key_encrypted, api_secret_encrypted, is_active
+  api_key_encrypted, api_secret_encrypted,
+  is_active, last_sync
 )
 ```
 
 ## 🔑 Kluczowe Rozwiązania
 
-### 1. Timestamps
-**Problem**: SQLite `CURRENT_TIMESTAMP` zwraca UTC, frontend parsował jako local time.
+### 1. **Database Reset on Startup**
+**Założenie**: Każde uruchomienie kontenera = czysty start (dla demo).
 
-**Rozwiązanie**: Backend używa `datetime.now().isoformat(sep=' ', timespec='seconds')` dla explicit local time.
+**Implementacja**: `backend/app/database.py::seed_data()`
+```python
+def seed_data():
+    """Clear products and suggestions on startup - fresh start every time"""
+    cursor.execute('DELETE FROM products')
+    cursor.execute('DELETE FROM suggestions')
+    cursor.execute('DELETE FROM events WHERE product_id IS NOT NULL')
+```
+
+### 2. **AI Agent - Workflow Generowania Sugestii**
+
+#### Zasady AI:
+1. **Maksymalna liczba sugestii** = `total_products / 2`
+2. **DummyJSON** używany TYLKO do analizy rynku (porównanie cen)
+3. **Sugestie dotyczą TYLKO** produktów z Shopify (NIE z DummyJSON)
+4. **Produkty wykluczane z analizy**: `product_type` in `['bundle', 'promotion', 'Zestaw', 'Promocja']`
+
+#### Implementacja:
+```python
+# backend/app/services/ai_agent_service.py:248-257
+
+# Get all products (exclude bundles and promos)
+cursor.execute('''
+    SELECT id, name FROM products
+    WHERE (product_type IS NULL OR product_type NOT IN ('bundle', 'promotion', 'Zestaw', 'Promocja'))
+''')
+products = cursor.fetchall()
+
+# Limit to half of products
+total_products = len(products)
+max_products_to_analyze = max(1, total_products // 2)
+```
+
+#### Prompt Structure:
+AI otrzymuje:
+1. **Produkt do analizy** (z naszego Shopify)
+2. **WSZYSTKIE inne produkty** z naszego sklepu (do bundle/promo)
+3. **Dane rynkowe** z DummyJSON (TYLKO do porównania cen)
 
 ```python
-now = datetime.now().isoformat(sep=' ', timespec='seconds')
-cursor.execute('INSERT INTO events (..., created_at) VALUES (..., ?)', (..., now))
+prompt = f"""
+PRODUKT DO ANALIZY (NASZ SKLEP SHOPIFY):
+- ID: {product['id']}
+- Nazwa: {product['name']}
+- Cena: {product['price']} PLN
+
+POZOSTAŁE PRODUKTY W NASZYM SKLEPIE SHOPIFY:
+{shop_products_text}
+
+DANE RYNKOWE DO ANALIZY (DummyJSON - tylko do porównania, NIE nasze produkty):
+{json.dumps(market_data[:5])}
+
+KRYTYCZNIE WAŻNE:
+- WSZYSTKIE sugestie dotyczą TYLKO produktów z naszego sklepu Shopify!
+- W bundle/promo używaj TYLKO ID produktów z sekcji "POZOSTAŁE PRODUKTY W NASZYM SKLEPIE"
+- NIE używaj produktów z DummyJSON - to tylko dane do analizy rynku!
+"""
 ```
 
-Frontend:
-```javascript
-const date = new Date(dateString.replace(' ', 'T')); // SQLite format to ISO
-```
+### 3. **Bundle & Promo Creation**
 
-### 2. Aktualizacja Ceny z Sugestii
-**Problem**: Sugestie cenowe nie aktualizowały produktu.
+#### Bundle (2-3 produkty):
+**Workflow**:
+1. Pobiera produkty z `related_product_ids` (JSON: `[29, 30, 31]`)
+2. **Walidacja**: sprawdza czy żaden produkt nie ma `product_type` in `['bundle', 'promotion', 'Zestaw', 'Promocja']`
+3. Tworzy nowy produkt w Shopify:
+   - `name`: "BUNDLE: Product1 + Product2 + Product3"
+   - `price`: suma cen * 0.9 (10% zniżki)
+   - `stock`: min(stock z wszystkich produktów)
+   - `vendor`: "AI Bundle"
+   - **`product_type`: "bundle"**
+4. Ustawia stock oryginalnych produktów na 0 (Shopify + DB)
+5. Zmienia status oryginalnych produktów na `'bundled'`
 
-**Rozwiązanie**: Backend parsuje opis sugestii regex i aktualizuje cenę.
+**Implementacja**: `backend/app/services/suggestion_service.py:194-244`
 
 ```python
-# Pattern 1: "Podwyższ cenę do 169.99"
-match = re.search(r'do\s+(\d+\.?\d*)', description)
+# Validate: cannot create bundle from bundles or promos
+invalid_products = [p for p in products_to_bundle
+                   if p.get('product_type') in ['bundle', 'promotion', 'Zestaw', 'Promocja']]
+if invalid_products:
+    return error("Nie można tworzyć bundla z bundli lub promek")
 
-# Pattern 2: "Obniż cenę o 15%"
-match = re.search(r'o\s+(\d+)%', description)
+# Create new bundle product
+new_product = integration.create_product({
+    'name': bundle_name[:100],
+    'price': bundle_price,
+    'stock': min(p['stock'] for p in products_to_bundle),
+    'vendor': 'AI Bundle',
+    'product_type': 'bundle'  # <-- KLUCZOWE!
+})
+
+# Reduce stock to 0
+for prod in products_to_bundle:
+    integration.update_product_stock(prod['external_id'], 0)
+    cursor.execute('UPDATE products SET stock = 0, status = ? WHERE id = ?',
+                 ('bundled', prod['id']))
 ```
 
-Lokalizacja: `backend/app/main.py:233-259`
+#### Promo (1+1):
+**Workflow**:
+1. Pobiera main product + 1 related product
+2. **Walidacja**: sprawdza czy żaden nie jest bundle/promo
+3. Tworzy nowy produkt w Shopify:
+   - `name`: "PROMO 1+1: Product1 + Product2"
+   - `price`: price1 + price2 * 0.5 (drugi produkt 50% taniej)
+   - `vendor`: "AI Promo"
+   - **`product_type`: "promotion"**
+4. Ustawia stock oryginalnych na 0
+5. Zmienia status na `'promo_used'`
 
-### 3. Obsługa Kliknięć w Tabeli
-**Problem**: Każde kliknięcie otwierało modal.
+**Implementacja**: `backend/app/services/suggestion_service.py:139-192`
 
-**Rozwiązanie**:
-- Kliknięcie w **wiersz** → zaznaczenie + sugestie w sidebar
-- Kliknięcie w **nazwę produktu** → modal ze szczegółami
+### 4. **Product Type Filtering**
 
-```jsx
-// ProductsTable.jsx
-<tr onClick={() => onSelectProduct(product)}>
-  <td>
-    <span className="product-name-link"
-          onClick={(e) => { e.stopPropagation(); onShowDetails(product); }}>
-      {product.name}
-    </span>
-  </td>
-</tr>
+**KRYTYCZNE**: Wszystkie filtry muszą obsługiwać zarówno nowe jak i legacy nazwy:
+- **Nowe**: `'bundle'`, `'promotion'`
+- **Legacy**: `'Zestaw'`, `'Promocja'` (stare polskie nazwy)
+
+```python
+# Poprawny filtr:
+if product.get('product_type') in ['bundle', 'promotion', 'Zestaw', 'Promocja']:
+    # Skip from analysis
 ```
 
-### 4. Auto-odświeżanie po Zastosowaniu Sugestii
-**Problem**: Aktywne promocje nie pojawiały się bez F5.
+**Lokalizacje**:
+- `backend/app/services/ai_agent_service.py:163-169` (skip analysis)
+- `backend/app/services/ai_agent_service.py:175-176` (get products for AI)
+- `backend/app/services/ai_agent_service.py:251` (get all products)
+- `backend/app/services/suggestion_service.py:154` (promo validation)
+- `backend/app/services/suggestion_service.py:209` (bundle validation)
 
-**Rozwiązanie**: Callback `handleSuggestionApplied` wywołuje `loadProducts()`.
+### 5. **Related Product IDs Storage**
 
-```javascript
-const handleSuggestionApplied = (notificationData) => {
-  setNotification(notificationData);
-  loadProducts(); // Refresh products & active promotions
-  setHistoryRefresh(prev => prev + 1);
-};
+Bundle i promo sugestie przechowują powiązane produkty jako JSON string:
+
+```python
+# Zapisywanie (AI agent)
+product_ids_json = json.dumps(suggestion['product_ids'])  # [29, 30, 31]
+cursor.execute('''
+    INSERT INTO suggestions (product_id, type, description, related_product_ids)
+    VALUES (?, ?, ?, ?)
+''', (product_id, 'bundle', description, product_ids_json))
+
+# Odczytywanie (apply suggestion)
+related_ids = json.loads(suggestion['related_product_ids'])  # [29, 30, 31]
 ```
 
-## 🎮 Tryb Demo
+### 6. **Shopify Integration - Product Type**
 
-### Quick Setup
+Podczas tworzenia/synchronizacji produktów, `product_type` jest przekazywane do/z Shopify:
+
+```python
+# backend/app/integrations/shopify.py:70-72
+products.append({
+    'vendor': product.get('vendor', ''),
+    'product_type': product.get('product_type', '')  # <-- Synchronizacja
+})
+
+# backend/app/integrations/shopify.py:193
+payload = {
+    'product': {
+        'vendor': product_data.get('vendor', ''),
+        'product_type': product_data.get('product_type', ''),  # <-- Ustawienie
+    }
+}
+```
+
+## 🎮 API Endpoints
+
+### Products
+- `GET /api/products` - Get all products
+- `GET /api/products/<id>` - Get product details
+
+### Suggestions
+- `GET /api/suggestions?product_id=<id>` - Get suggestions for product
+- `POST /api/suggestions/<id>/apply` - **Apply suggestion** (creates bundle/promo in Shopify)
+
+### AI Agent
+- `POST /api/ai/analyze-all` - Generate suggestions for max(1, total_products/2) products
+- `POST /api/ai/analyze/<product_id>` - Generate suggestions for specific product
+
+### Sync
+- `POST /api/connections/<id>/sync` - Sync products from Shopify
+
+## 🔧 Environment Variables
+
 ```bash
-# Frontend
-POST /api/connections/demo/quick-setup
-# Tworzy 2 demo sklepy (WooCommerce + Shopify)
-
-# Synchronizacja
-POST /api/connections/:id/sync
-# Generuje 8-20 produktów + auto-sugestie
+# Backend (.env)
+SHOPIFY_STORE_URL=your-store.myshopify.com
+SHOPIFY_ACCESS_TOKEN=shpat_xxxxx
+OPENAI_API_KEY=sk-xxxxx
+OPENAI_MODEL=gpt-4o-mini
+ENCRYPTION_KEY=your-32-byte-key
 ```
-
-### MockIntegration
-- `backend/app/integrations/mock.py`
-- Zwraca random produkty (8-20 sztuk) z realistycznymi cenami/stockiem
-- Używany gdy `api_key == 'demo-key'`
-
-### Auto-generowanie Sugestii
-- `backend/app/suggestions_generator.py`
-- Tworzy 2-4 sugestie per produkt (tylko dla demo)
-- Szablony w 3 językach: price, promo, bundle
 
 ## 🐛 Znane Problemy/Fixe
 
-### Fix #1: Import Error PBKDF2
+### Fix #1: httpx Dependency
+**Problem**: OpenAI SDK wymaga `httpx` ale nie było w requirements.txt
+
+**Rozwiązanie**:
+```bash
+# backend/requirements.txt
+httpx==0.27.0
+```
+
+### Fix #2: Logger Import w database.py
+**Problem**: `NameError: name 'logger' is not defined`
+
+**Rozwiązanie**:
 ```python
-# ❌ Przed
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
-
-# ✅ Po
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+# backend/app/database.py
+from utils.logger import get_logger
+logger = get_logger(__name__)
 ```
 
-### Fix #2: Cascade Delete Produktów
-```python
-# Przy usuwaniu connection, najpierw usuń produkty
-cursor.execute('DELETE FROM products WHERE connection_id = ?', (connection_id,))
-cursor.execute('DELETE FROM store_connections WHERE id = ?', (connection_id,))
+### Fix #3: Code Changes Not Reflected
+**Problem**: Docker nie ma volume mount dla kodu, zmiany wymagają rebuild
+
+**Rozwiązanie**:
+```bash
+docker-compose build backend
+docker-compose up -d backend
 ```
 
-### Fix #3: Stock Field Missing
-Dodano kolumnę `stock INTEGER DEFAULT 0` do tabeli products + update sync logic.
+## 🚀 Testing Workflow
 
-## 📦 Bundle System (W TRAKCIE)
-
-### Stan Implementacji
-✅ Tabele (`bundles`, `bundle_items`) utworzone
-❌ Tworzenie bundle z sugestii - TODO
-❌ Kalkulacja dostępności: `min(product.stock / bundle_item.quantity)` - TODO
-❌ Synchronizacja nakładu między produktami - TODO
-
-### Założenia Biznesowe
-1. Bundle składa się z 2+ produktów
-2. Dostępność bundle = minimum z `floor(product.stock / quantity_in_bundle)`
-3. Sprzedaż bundle OR pojedynczego produktu zmniejsza stock obu
-4. Bundle to osobny listing z własnym SKU
-
-### Przykład
-```
-Bundle: "Gaming Set"
-- Gaming Mouse RGB (qty: 1, stock: 15)
-- Mouse Pad (qty: 1, stock: 20)
-→ Bundle availability: min(15/1, 20/1) = 15
+### 1. Sync Products
+```bash
+curl -X POST http://localhost:5001/api/connections/1/sync
+# Response: {"success": true, "products_synced": 4}
 ```
 
-## 🚀 Deployment
+### 2. Generate AI Suggestions
+```bash
+curl -X POST http://localhost:5001/api/ai/analyze-all
+# Response: {"total_products": 4, "max_analyzed": 2, "total_suggestions_created": 6}
+```
+
+### 3. View Suggestions
+```bash
+curl "http://localhost:5001/api/suggestions?product_id=57"
+# Returns: [{id: 74, type: 'price', ...}, {id: 75, type: 'promo', ...}, {id: 76, type: 'bundle', ...}]
+```
+
+### 4. Apply Bundle Suggestion
+```bash
+curl -X POST http://localhost:5001/api/suggestions/76/apply
+# Creates new bundle in Shopify, sets original products stock to 0
+```
+
+### 5. Sync to See New Bundle
+```bash
+curl -X POST http://localhost:5001/api/connections/1/sync
+# Response: {"products_synced": 5}  <- now includes the bundle
+```
+
+### 6. Verify Bundle Excluded from AI
+```bash
+curl -X POST http://localhost:5001/api/ai/analyze-all
+# Response: {"total_products": 3, ...}  <- bundles/promos excluded!
+```
+
+## 📦 Deployment
 
 ### Development
 ```bash
-docker-compose up
-# Frontend: http://localhost:5173
+docker-compose up -d
+# Frontend: http://localhost:3000
 # Backend: http://localhost:5001
 # Health: http://localhost:5001/health
 ```
 
-### Clean Reset
+### Restart After Code Changes
 ```bash
-docker-compose down -v  # Usuwa volume z bazą
-docker-compose up
+docker-compose build backend
+docker-compose up -d backend
 ```
 
-## 📝 Konwencje Kodu
+### View Logs
+```bash
+docker logs -f product-suggestions-backend
+```
 
-### Backend
-- **Logging**: `logger.info()` dla operacji, `logger.error()` dla błędów
-- **Errors**: Return `jsonify({'error': 'message'})` z odpowiednim status code
-- **Transactions**: Context manager `with get_db() as conn:` auto-commit/rollback
+### Clean Reset
+```bash
+docker-compose down -v  # Removes database volume
+docker-compose up -d
+```
 
-### Frontend
-- **API errors**: Catch w `try/catch`, display w state `error`
-- **Loading states**: Zawsze `loading` state dla async operacji
-- **Notifications**: Auto-dismiss po 3s, typ: success/error
+## 📝 File Structure
 
-### Database
-- **Timestamps**: Zawsze explicit `created_at` dla zdarzeń
-- **Foreign keys**: Używane, ale bez CASCADE (explicit delete)
-- **Text fields**: VARCHAR nie istnieje w SQLite, używaj TEXT
+```
+backend/app/
+├── main.py                      # Flask app, API routes
+├── database.py                  # Schema, seed_data(), migrations
+├── models.py                    # Pydantic models
+├── crypto.py                    # AES encryption
+├── services/
+│   ├── ai_agent_service.py     # ⭐ AI suggestion generation (OpenAI)
+│   ├── suggestion_service.py   # ⭐ Apply suggestions (bundle/promo creation)
+│   ├── product_service.py      # Product CRUD
+│   ├── sync_service.py         # Shopify sync
+│   ├── connection_service.py   # Store connections
+│   └── dummyjson_service.py    # Market data API
+├── integrations/
+│   ├── base.py                 # Base integration interface
+│   └── shopify.py              # ⭐ Shopify Admin API (product_type handling)
+└── utils/
+    └── logger.py               # Logging setup
+```
 
-## 🔮 Następne Kroki
+## 🔮 Kluczowe Założenia Biznesowe
 
-1. **Bundle System**
-   - Endpoint: `POST /api/bundles/create`
-   - Logika kalkulacji dostępności
-   - UI dla tworzenia bundle z sugestii
+### Workflow Sugestii:
+```
+1. User syncs products from Shopify
+   ↓
+2. AI analyzes products (max total/2, excludes bundles/promos)
+   ↓
+3. AI generates suggestions (price/promo/bundle) using:
+   - DummyJSON for market price analysis
+   - Shopify products for bundle/promo combinations
+   ↓
+4. Suggestions saved with status='new'
+   ↓
+5. User reviews and applies suggestions
+   ↓
+6. For bundle/promo: create new product in Shopify, reduce original stock to 0
+   ↓
+7. Next sync: new bundles/promos appear, but are excluded from AI analysis
+```
 
-2. **Stock Synchronization**
-   - Webhook/endpoint dla zakupów
-   - Aktualizacja stock w produktach bundle
+### Bundle Rules:
+- 2-3 produkty
+- 10% zniżki od sumy cen
+- Stock = min(stock wszystkich produktów)
+- Oryginalne produkty: stock → 0, status → 'bundled'
+- **NIE można** tworzyć bundla z bundla ani promki z promki
 
-3. **Monitoring Konkurencji**
-   - Tabela `competitor_prices` jest utworzona
-   - BeautifulSoup scraping - do implementacji
+### Promo Rules:
+- 2 produkty (1+1)
+- Drugi produkt 50% taniej
+- Stock = min(stock obu produktów)
+- Oryginalne produkty: stock → 0, status → 'promo_used'
 
 ## 🆘 Troubleshooting
 
-### Backend nie startuje
+### Bundle dostaje sugestie AI
+**Problem**: Bundle ma `product_type='Zestaw'` (stara polska nazwa)
+
+**Rozwiązanie**: Filtry muszą zawierać zarówno `'bundle'` jak i `'Zestaw'`
+
+### AI sugeruje produkty z DummyJSON
+**Problem**: Prompt nie był wystarczająco jasny
+
+**Rozwiązanie**: Prompt zawiera teraz sekcję "KRYTYCZNIE WAŻNE" z explicit instrukcjami
+
+### Code changes not working
+**Problem**: Docker nie ma volume mount
+
+**Rozwiązanie**:
 ```bash
-docker-compose logs backend
-# Sprawdź czy port 5001 jest wolny
+docker-compose build backend && docker-compose up -d backend
 ```
-
-### Frontend nie łączy się z API
-```bash
-# frontend/.env
-VITE_API_URL=http://localhost:5001
-```
-
-### Baza danych corrupted
-```bash
-docker-compose down -v
-docker volume rm synderhacks_wro_2025_sqlite-data
-docker-compose up
-```
-
-## 📚 Przydatne Pliki
-
-- `backend/app/main.py` - Wszystkie endpointy API
-- `backend/app/database.py` - Schema + seed data
-- `frontend/src/App.jsx` - Main component, state management
-- `frontend/src/index.css` - Wszystkie style
-- `DEMO_MODE.md` - Instrukcje trybu demo
-- `STORE_API_SETUP.md` - Setup prawdziwych sklepów
 
 ## 🤝 Praca Zespołowa z Claude
 
 ### Dla Nowej Osoby
-1. Przeczytaj ten plik najpierw
-2. Uruchom `docker-compose up`
-3. Przetestuj demo: http://localhost:5173 → "🎮 Szybkie Demo"
-4. Sprawdź `git log` dla historii zmian
+1. **Przeczytaj**: `CLAUDE_CONTEXT.md` (ten plik)
+2. **Przeczytaj**: `ARCHITECTURE.md` (szczegóły techniczne)
+3. **Setup**: `docker-compose up -d`
+4. **Test**: Wykonaj workflow z sekcji "Testing Workflow"
+5. **Git**: `git log` - sprawdź ostatnie zmiany
 
 ### Przed Zadaniem Pytania Claude
-- Podaj kontekst: "Pracuję nad Product Suggestions Manager, przeczytałem CLAUDE_CONTEXT.md"
-- Wskaż konkretny problem/feature
-- Załącz relevantny kod jeśli potrzeba
+Podaj kontekst:
+```
+Pracuję nad Product Suggestions Manager.
+Przeczytałem CLAUDE_CONTEXT.md i ARCHITECTURE.md.
+Aktualny branch: backend/api-structure
+
+[Twoje pytanie...]
+```
 
 ### Commitowanie
 ```bash
 git add .
-git commit -m "feat(feature): opis zmiany
+git commit -m "feat(ai-agent): implement bundle/promo exclusion from analysis
 
-- szczegóły
-- co zostało naprawione/dodane
+- Added product_type filtering in AI agent
+- Bundles and promos now excluded from AI analysis
+- Validation prevents nested bundles/promos
+- Updated Shopify integration to sync product_type
+- Added related_product_ids to suggestions table
+- Tested workflow: sync → analyze → apply → verify exclusion
 "
 ```
 
 ## 📊 Metryki Projektu
 
-- **Backend endpoints**: 11
-- **React components**: 7
+- **Backend endpoints**: 15+
+- **React components**: 10+
 - **Database tables**: 8
+- **AI Integration**: OpenAI GPT-4o-mini
+- **Lines of code**: ~3000 (backend) + ~1500 (frontend)
 - **Docker containers**: 2
-- **Lines of code**: ~2500 (backend) + ~1200 (frontend)
-- **Test coverage**: Demo mode (manual testing)
 
 ---
 
-**Ostatnia aktualizacja**: 2025-11-08
-**Status**: MVP ukończone, Bundle system w trakcie
-**Autorzy**: Igor Olewicz + Claude
+**Ostatnia aktualizacja**: 2025-11-09
+**Status**: AI Agent ukończony, Bundle/Promo system ukończony
+**Branch**: `backend/api-structure`
+**Autorzy**: Andrii Nikonchuk + Claude

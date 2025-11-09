@@ -161,19 +161,21 @@ def _upsert_product(cursor, product: Dict, connection_id: int) -> int:
         cursor.execute('''
             UPDATE products
             SET name = ?, price = ?, stock = ?, status = ?, connection_id = ?,
-                external_id = ?, updated_at = CURRENT_TIMESTAMP
+                external_id = ?, vendor = ?, product_type = ?, updated_at = CURRENT_TIMESTAMP
             WHERE sku = ?
         ''', (product['name'], product['price'], product.get('stock', 0), product['status'],
-              connection_id, product['external_id'], product['sku']))
+              connection_id, product['external_id'], product.get('vendor', ''),
+              product.get('product_type', ''), product['sku']))
         return existing[0]
     else:
         # Insert new product
         cursor.execute('''
             INSERT INTO products
-            (sku, name, price, stock, status, channel, connection_id, external_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (sku, name, price, stock, status, channel, connection_id, external_id, vendor, product_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (product['sku'], product['name'], product['price'], product.get('stock', 0),
-              product['status'], product['channel'], connection_id, product['external_id']))
+              product['status'], product['channel'], connection_id, product['external_id'],
+              product.get('vendor', ''), product.get('product_type', '')))
         return cursor.lastrowid
 
 

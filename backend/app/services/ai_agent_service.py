@@ -38,13 +38,14 @@ def _get_openai_client():
     return client
 
 
-def analyze_product_with_ai(product: Dict, market_data: List[Dict]) -> Dict:
+def analyze_product_with_ai(product: Dict, market_data: List[Dict], all_shop_products: List[Dict]) -> Dict:
     """
     Use OpenAI to analyze a product against market data and generate suggestions.
 
     Args:
         product: Product dictionary with id, name, price, stock, etc.
-        market_data: List of similar products from DummyJSON.
+        market_data: List of similar products from DummyJSON (for analysis only).
+        all_shop_products: List of ALL products from our Shopify store.
 
     Returns:
         Dict with analysis results and suggestions.
@@ -53,39 +54,51 @@ def analyze_product_with_ai(product: Dict, market_data: List[Dict]) -> Dict:
         ai_client = _get_openai_client()
         model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
 
-        # Prepare prompt
-        prompt = f"""Jesteś ekspertem od e-commerce i strategii cenowej. Przeanalizuj produkt ze sklepu Shopify i porównaj go z danymi rynkowymi.
+        # Format shop products for prompt
+        shop_products_text = "\n".join([
+            f"- ID: {p['id']}, Nazwa: {p['name']}, Cena: {p['price']} PLN, Stan: {p['stock']} szt"
+            for p in all_shop_products if p['id'] != product['id']
+        ])
 
-PRODUKT ZE SKLEPU:
+        # Prepare prompt
+        prompt = f"""Jesteś ekspertem od e-commerce i strategii cenowej.
+
+PRODUKT DO ANALIZY (NASZ SKLEP SHOPIFY):
+- ID: {product['id']}
 - Nazwa: {product['name']}
 - Cena: {product['price']} PLN
 - Stan magazynowy: {product['stock']} sztuk
-- Status: {product['status']}
 
-PODOBNE PRODUKTY NA RYNKU (z DummyJSON):
+POZOSTAŁE PRODUKTY W NASZYM SKLEPIE SHOPIFY:
+{shop_products_text}
+
+DANE RYNKOWE DO ANALIZY (DummyJSON - tylko do porównania, NIE nasze produkty):
 {json.dumps(market_data[:5], indent=2, ensure_ascii=False)}
 
 ZADANIE:
-Wygeneruj 3-5 konkretnych, praktycznych sugestii dotyczących:
-1. Optymalizacji ceny (price) - czy cena jest konkurencyjna?
-2. Promocji (promo) - jakie akcje promocyjne mogą zwiększyć sprzedaż?
-3. Bundli (bundle) - z którymi produktami warto stworzyć pakiet?
+Wygeneruj maksymalnie 2-3 sugestie dla produktu ID {product['id']}:
+1. Optymalizacja ceny (price) - porównaj z rynkiem
+2. Promocja (promo) - połącz z INNYM produktem z naszego sklepu (podaj jego ID)
+3. Bundle (bundle) - połącz 2-3 produkty z naszego sklepu (podaj ich ID)
 
-WAŻNE:
-- Sugestie muszą być KONKRETNE i zawierać konkretne wartości/liczby
-- Bierz pod uwagę polski rynek i PLN
-- Każda sugestia powinna mieć jasne uzasadnienie biznesowe
+KRYTYCZNIE WAŻNE:
+- WSZYSTKIE sugestie dotyczą TYLKO produktów z naszego sklepu Shopify!
+- W bundle/promo używaj TYLKO ID produktów z sekcji "POZOSTAŁE PRODUKTY W NASZYM SKLEPIE"
+- NIE używaj produktów z DummyJSON - to tylko dane do analizy rynku!
+- Bundle musi zawierać 2-3 produkty z naszego sklepu (podaj konkretne ID)
+- Promo może łączyć 2 produkty (1+1, podaj konkretne ID)
 
 Odpowiedz TYLKO w formacie JSON:
 {{
   "suggestions": [
     {{
       "type": "price|promo|bundle",
-      "description": "Konkretna sugestia z konkretnymi wartościami",
-      "reasoning": "Krótkie uzasadnienie biznesowe"
+      "description": "Konkretna sugestia z wartościami i ID produktów z NASZEGO sklepu",
+      "reasoning": "Uzasadnienie biznesowe",
+      "product_ids": [lista ID produktów z naszego sklepu, jeśli bundle/promo]
     }}
   ],
-  "market_position": "Krótka analiza pozycji rynkowej produktu"
+  "market_position": "Analiza pozycji rynkowej"
 }}"""
 
         # Call OpenAI
@@ -136,7 +149,7 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
 
         # Get product
         cursor.execute('''
-            SELECT id, name, price, stock, status, channel
+            SELECT id, name, price, stock, status, channel, product_type
             FROM products WHERE id = ?
         ''', (product_id,))
 
@@ -146,7 +159,24 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
 
         product = dict(row)
 
-        # Find similar products from DummyJSON
+        # Don't analyze bundles or promos
+        if product.get('product_type') in ['bundle', 'promotion', 'Zestaw', 'Promocja']:
+            logger.info(f"Skipping analysis for {product.get('product_type')} product {product_id}")
+            return {
+                "product_id": product_id,
+                "suggestions_created": 0,
+                "message": f"Produkt typu {product.get('product_type')} nie jest analizowany"
+            }
+
+        # Get ALL products from our shop (exclude bundles and promos)
+        cursor.execute('''
+            SELECT id, name, price, stock, status, channel
+            FROM products
+            WHERE (product_type IS NULL OR product_type NOT IN ('bundle', 'promotion', 'Zestaw', 'Promocja'))
+        ''')
+        all_shop_products = [dict(row) for row in cursor.fetchall()]
+
+        # Find similar products from DummyJSON (for market analysis only)
         logger.info(f"Searching DummyJSON for products similar to: {product['name']}")
         market_data = dummyjson_service.find_similar_products(product['name'], product['price'])
 
@@ -160,19 +190,25 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
 
         # Analyze with AI
         logger.info(f"Analyzing product {product_id} with AI agent...")
-        analysis = analyze_product_with_ai(product, market_data)
+        analysis = analyze_product_with_ai(product, market_data, all_shop_products)
 
         # Save suggestions to database
         suggestions_created = 0
         for suggestion in analysis.get('suggestions', []):
             try:
+                # Get product_ids for bundle/promo
+                product_ids_json = None
+                if 'product_ids' in suggestion and suggestion['product_ids']:
+                    product_ids_json = json.dumps(suggestion['product_ids'])
+
                 cursor.execute('''
-                    INSERT INTO suggestions (product_id, type, description, status)
-                    VALUES (?, ?, ?, 'new')
+                    INSERT INTO suggestions (product_id, type, description, status, related_product_ids)
+                    VALUES (?, ?, ?, 'new', ?)
                 ''', (
                     product_id,
                     suggestion['type'],
-                    f"{suggestion['description']} | Uzasadnienie: {suggestion['reasoning']}"
+                    f"{suggestion['description']} | Uzasadnienie: {suggestion['reasoning']}",
+                    product_ids_json
                 ))
                 suggestions_created += 1
             except Exception as e:
@@ -200,7 +236,8 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
 
 def generate_suggestions_for_all_products() -> Dict:
     """
-    Generate AI suggestions for all products in the database.
+    Generate AI suggestions for products in the database.
+    Maximum number of products with suggestions = total_products / 2.
 
     Returns:
         Dict with summary of suggestions generated.
@@ -208,15 +245,25 @@ def generate_suggestions_for_all_products() -> Dict:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get all products
-        cursor.execute('SELECT id, name FROM products')
+        # Get all products (exclude bundles and promos)
+        cursor.execute('''
+            SELECT id, name FROM products
+            WHERE (product_type IS NULL OR product_type NOT IN ('bundle', 'promotion', 'Zestaw', 'Promocja'))
+        ''')
         products = cursor.fetchall()
+
+    # Limit to half of products
+    total_products = len(products)
+    max_products_to_analyze = max(1, total_products // 2)
+
+    logger.info(f"Total products: {total_products}, will analyze max: {max_products_to_analyze}")
 
     total_suggestions = 0
     products_analyzed = 0
     errors = []
 
-    for product_row in products:
+    # Analyze only first half (or randomize selection)
+    for product_row in products[:max_products_to_analyze]:
         product_id = product_row[0]
         product_name = product_row[1]
 
@@ -233,6 +280,8 @@ def generate_suggestions_for_all_products() -> Dict:
 
     return {
         "success": True,
+        "total_products": total_products,
+        "max_analyzed": max_products_to_analyze,
         "products_analyzed": products_analyzed,
         "total_suggestions_created": total_suggestions,
         "errors": errors

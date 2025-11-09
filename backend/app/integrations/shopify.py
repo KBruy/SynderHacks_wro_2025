@@ -66,7 +66,9 @@ class ShopifyIntegration(StoreIntegration):
                     'price': float(variant.get('price', 0)),
                     'stock': int(variant.get('inventory_quantity', 0)),
                     'status': 'active' if variant.get('inventory_quantity', 0) > 0 else 'low_stock',
-                    'channel': 'shopify'
+                    'channel': 'shopify',
+                    'vendor': product.get('vendor', ''),
+                    'product_type': product.get('product_type', '')
                 })
 
         return products[:limit]
@@ -133,3 +135,125 @@ class ShopifyIntegration(StoreIntegration):
 
         result = self._request('PUT', f'/variants/{product_id}.json', json=payload)
         return result is not None
+
+    def update_product_stock(self, product_id: str, new_stock: int) -> bool:
+        """Update product variant inventory in Shopify"""
+        # First get the inventory item ID
+        variant = self._request('GET', f'/variants/{product_id}.json')
+        if not variant or 'variant' not in variant:
+            logger.error(f"Failed to fetch variant {product_id}")
+            return False
+
+        inventory_item_id = variant['variant'].get('inventory_item_id')
+        if not inventory_item_id:
+            logger.error(f"No inventory_item_id for variant {product_id}")
+            return False
+
+        # Get inventory levels to find location_id
+        inventory_levels = self._request('GET', f'/inventory_levels.json', params={
+            'inventory_item_ids': inventory_item_id
+        })
+
+        if not inventory_levels or 'inventory_levels' not in inventory_levels or not inventory_levels['inventory_levels']:
+            logger.error(f"No inventory levels found for inventory_item_id {inventory_item_id}")
+            return False
+
+        location_id = inventory_levels['inventory_levels'][0]['location_id']
+
+        # Update inventory level
+        payload = {
+            'location_id': location_id,
+            'inventory_item_id': inventory_item_id,
+            'available': new_stock
+        }
+
+        result = self._request('POST', '/inventory_levels/set.json', json=payload)
+        return result is not None
+
+    def create_product(self, product_data: Dict) -> Optional[Dict]:
+        """Create a new product in Shopify
+
+        Args:
+            product_data: {
+                'name': str,
+                'price': float,
+                'stock': int,
+                'sku': str (optional),
+                'description': str (optional)
+            }
+
+        Returns:
+            Created product dict or None
+        """
+        payload = {
+            'product': {
+                'title': product_data['name'],
+                'body_html': product_data.get('description', ''),
+                'vendor': product_data.get('vendor', ''),
+                'product_type': product_data.get('product_type', ''),
+                'variants': [
+                    {
+                        'price': str(product_data['price']),
+                        'sku': product_data.get('sku', ''),
+                        'inventory_management': 'shopify',
+                        'inventory_quantity': int(product_data.get('stock', 0))
+                    }
+                ]
+            }
+        }
+
+        result = self._request('POST', '/products.json', json=payload)
+
+        if result and 'product' in result:
+            created_product = result['product']
+            variant = created_product['variants'][0]
+
+            return {
+                'external_id': str(variant['id']),
+                'sku': variant.get('sku', f"SHOPIFY-{variant['id']}"),
+                'name': created_product['title'],
+                'price': float(variant['price']),
+                'stock': int(variant.get('inventory_quantity', 0)),
+                'status': 'active',
+                'channel': 'shopify',
+                'vendor': created_product.get('vendor', ''),
+                'product_type': created_product.get('product_type', '')
+            }
+
+        return None
+
+    def update_product(self, product_id: str, updates: Dict) -> bool:
+        """Update product with multiple fields
+
+        Args:
+            product_id: Variant ID
+            updates: Dict with 'price', 'stock', 'sku', etc.
+        """
+        success = True
+
+        # Update price if specified
+        if 'price' in updates:
+            if not self.update_product_price(product_id, updates['price']):
+                logger.error(f"Failed to update price for product {product_id}")
+                success = False
+
+        # Update stock if specified
+        if 'stock' in updates:
+            if not self.update_product_stock(product_id, updates['stock']):
+                logger.error(f"Failed to update stock for product {product_id}")
+                success = False
+
+        # Update SKU or other variant fields if specified
+        if 'sku' in updates:
+            payload = {
+                'variant': {
+                    'id': int(product_id),
+                    'sku': updates['sku']
+                }
+            }
+            result = self._request('PUT', f'/variants/{product_id}.json', json=payload)
+            if not result:
+                logger.error(f"Failed to update SKU for product {product_id}")
+                success = False
+
+        return success
