@@ -15,9 +15,6 @@
 - [Our Solution](#our-solution)
 - [How It Works](#how-it-works)
 - [Technical Architecture](#technical-architecture)
-- [Quick Start](#quick-start)
-- [Usage Workflow](#usage-workflow)
-- [Development](#development)
 
 ---
 
