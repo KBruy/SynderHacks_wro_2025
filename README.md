@@ -355,23 +355,6 @@ Current implementation is optimized for **small to medium retailers** (1-10K pro
 
 ---
 
-## Security Features
-
-- **Credential Encryption**: AES-256 with PBKDF2HMAC (100,000 iterations)
-- **API Security**: CORS configuration, input validation
-- **No Hardcoded Secrets**: All credentials encrypted in database
-- **SQL Injection Prevention**: Parameterized queries throughout
-- **XSS Protection**: React's built-in escaping
-
-**⚠️ Production Deployment Notes:**
-- Change encryption master password in production
-- Implement rate limiting
-- Add user authentication & authorization
-- Use HTTPS for all API communication
-- Regular security audits
-
----
-
 ## Testing
 
 ### Manual Testing (Demo Mode)
@@ -442,28 +425,6 @@ services:
 
 ---
 
-## Future Enhancements
-
-### Planned Features
-- [ ] Machine learning for suggestion quality scoring
-- [ ] A/B testing framework for price variations
-- [ ] Competitor price monitoring with web scraping
-- [ ] Email notifications for high-priority suggestions
-- [ ] Multi-user support with role-based access
-- [ ] Advanced analytics dashboard with charts
-- [ ] Bulk suggestion application
-- [ ] Scheduled price changes
-- [ ] Integration with more platforms (Magento, BigCommerce)
-
-### Bundle System (In Progress)
-- [x] Database schema created
-- [x] Basic bundle creation endpoint
-- [ ] Stock synchronization between bundle and individual products
-- [ ] Bundle availability calculation: `min(product_stock / bundle_quantity)`
-- [ ] UI for bundle management
-
----
-
 ## Development
 
 ### Local Development (Without Docker)
@@ -498,30 +459,9 @@ docker build -t product-optimizer-backend .
 
 ---
 
-## Logging & Monitoring
-
-### Backend Logs
-```bash
-# Follow all logs
-docker-compose logs -f
-
-# Backend only
-docker-compose logs -f backend
-
-# Last 100 lines
-docker-compose logs --tail=100 backend
-```
-
-### Log Levels
-- **INFO**: Standard operations (product sync, suggestion application)
-- **WARNING**: Non-critical issues (missing optional fields)
-- **ERROR**: Failed operations (API errors, database issues)
-
----
-
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details
+MIT License
 
 ---
 
@@ -533,20 +473,7 @@ Developed during SynderHacks Wrocław 2025
 
 ---
 
-## Acknowledgments
-
-- WooCommerce REST API documentation
-- Shopify Admin API documentation
-- Flask and React communities
-- All open-source contributors
-
----
-
-## Contact
-
-For questions, issues, or collaboration opportunities:
-- Create an issue in the repository
-- Email: [your-email@example.com]
+Built with heart and detetrmination
 
 ---
 
