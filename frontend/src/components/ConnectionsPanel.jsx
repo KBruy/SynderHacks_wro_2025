@@ -78,34 +78,14 @@ export default function ConnectionsPanel({ onConnectionChange }) {
     }
   };
 
-  const handleQuickDemo = async () => {
-    if (!confirm('Utworzyć demo sklepy do testów? (WooCommerce + Shopify)')) return;
-
-    setLoading(true);
-    try {
-      const result = await api.quickDemoSetup();
-      alert(result.message + '\n\nTeraz możesz kliknąć "Synchronizuj" aby pobrać przykładowe produkty!');
-      await loadConnections();
-      if (onConnectionChange) onConnectionChange();
-    } catch (err) {
-      alert('Błąd tworzenia demo sklepów: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="connections-panel">
       <div className="panel-header">
         <h2>Połączenia ze sklepami</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn-demo" onClick={handleQuickDemo} disabled={loading}>
-            🎮 Szybkie Demo
-          </button>
-          <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'Anuluj' : '+ Dodaj połączenie'}
-          </button>
-        </div>
+        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Anuluj' : '+ Dodaj połączenie'}
+        </button>
       </div>
 
       {showForm && (
@@ -135,7 +115,7 @@ export default function ConnectionsPanel({ onConnectionChange }) {
           <div className="form-group">
             <label>URL sklepu</label>
             <input
-              type="url"
+              type={formData.platform === 'shopify' ? 'text' : 'url'}
               value={formData.store_url}
               onChange={(e) => setFormData({...formData, store_url: e.target.value})}
               placeholder={formData.platform === 'shopify' ? 'myshop.myshopify.com' : 'https://myshop.com'}

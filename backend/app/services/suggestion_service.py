@@ -162,10 +162,12 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                         # Create promo product name and price
                         promo_name = f"PROMO 1+1: {products_to_combine[0]['name']} + {products_to_combine[1]['name']}"
                         promo_price = products_to_combine[0]['price'] + products_to_combine[1]['price'] * 0.5  # Second one 50% off
+                        promo_sku = f"PROMO-{suggestion['product_id']}-{'-'.join(str(p['id']) for p in products_to_combine[:2])}"
 
                         # Create new promo product in Shopify
                         new_product = integration.create_product({
                             'name': promo_name,
+                            'sku': promo_sku,
                             'price': promo_price,
                             'stock': min(p['stock'] for p in products_to_combine),
                             'vendor': 'AI Promo',
@@ -173,15 +175,40 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                         })
 
                         if new_product:
+                            # Save promo to database
+                            cursor.execute('''
+                                SELECT connection_id FROM products WHERE id = ? LIMIT 1
+                            ''', (suggestion['product_id'],))
+                            connection_row = cursor.fetchone()
+                            connection_id = connection_row[0] if connection_row else None
+
+                            cursor.execute('''
+                                INSERT INTO products (sku, name, price, stock, status, channel, connection_id, external_id, vendor, product_type, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ''', (
+                                new_product['sku'],
+                                new_product['name'],
+                                new_product['price'],
+                                new_product['stock'],
+                                new_product['status'],
+                                new_product['channel'],
+                                connection_id,
+                                new_product['external_id'],
+                                new_product.get('vendor', 'AI Promo'),
+                                'promotion',
+                                now,
+                                now
+                            ))
+                            promo_product_id = cursor.lastrowid
+
                             # Reduce stock of original products to 0
                             for prod in products_to_combine:
                                 integration.update_product_stock(prod['external_id'], 0)
                                 cursor.execute('UPDATE products SET stock = 0, status = ? WHERE id = ?',
                                              ('promo_used', prod['id']))
 
-                            # Save new promo product to DB
-                            from services.product_service import create_product_in_store
                             applied_actions.append(f"Utworzono produkt PROMO: {promo_name} ({promo_price} PLN)")
+                            applied_actions.append(f"Promo zapisane w bazie danych (ID: {promo_product_id})")
                             applied_actions.append(f"Zmniejszono stan produktów: {', '.join([p['name'] for p in products_to_combine])}")
                         else:
                             applied_actions.append("BŁĄD: Nie udało się utworzyć produktu promo")
@@ -217,10 +244,12 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                         # Create bundle product name and price (10% discount)
                         bundle_name = f"BUNDLE: " + " + ".join([p['name'] for p in products_to_bundle])
                         bundle_price = sum(p['price'] for p in products_to_bundle) * 0.9  # 10% discount
+                        bundle_sku = f"BUNDLE-{suggestion['product_id']}-{'-'.join(str(p['id']) for p in products_to_bundle[:3])}"
 
                         # Create new bundle product in Shopify
                         new_product = integration.create_product({
                             'name': bundle_name[:100],  # Limit name length
+                            'sku': bundle_sku,
                             'price': bundle_price,
                             'stock': min(p['stock'] for p in products_to_bundle),
                             'vendor': 'AI Bundle',
@@ -228,6 +257,32 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                         })
 
                         if new_product:
+                            # Save bundle to database
+                            cursor.execute('''
+                                SELECT connection_id FROM products WHERE id = ? LIMIT 1
+                            ''', (suggestion['product_id'],))
+                            connection_row = cursor.fetchone()
+                            connection_id = connection_row[0] if connection_row else None
+
+                            cursor.execute('''
+                                INSERT INTO products (sku, name, price, stock, status, channel, connection_id, external_id, vendor, product_type, created_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ''', (
+                                new_product['sku'],
+                                new_product['name'],
+                                new_product['price'],
+                                new_product['stock'],
+                                new_product['status'],
+                                new_product['channel'],
+                                connection_id,
+                                new_product['external_id'],
+                                new_product.get('vendor', 'AI Bundle'),
+                                'bundle',
+                                now,
+                                now
+                            ))
+                            bundle_product_id = cursor.lastrowid
+
                             # Reduce stock of original products to 0
                             for prod in products_to_bundle:
                                 integration.update_product_stock(prod['external_id'], 0)
@@ -235,6 +290,7 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                                              ('bundled', prod['id']))
 
                             applied_actions.append(f"Utworzono BUNDLE: {bundle_name[:50]}... ({bundle_price:.2f} PLN)")
+                            applied_actions.append(f"Bundle zapisany w bazie danych (ID: {bundle_product_id})")
                             applied_actions.append(f"Zmniejszono stan {len(products_to_bundle)} produktów")
                         else:
                             applied_actions.append("BŁĄD: Nie udało się utworzyć bundle")

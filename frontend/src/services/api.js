@@ -88,4 +88,17 @@ export const api = {
       method: 'POST',
     });
   },
+
+  // AI Suggestions
+  async generateSuggestionsForAll() {
+    return fetchWithError(`${API_BASE_URL}/api/ai/analyze-all`, {
+      method: 'POST',
+    });
+  },
+
+  async generateSuggestionsForProduct(productId) {
+    return fetchWithError(`${API_BASE_URL}/api/ai/analyze/${productId}`, {
+      method: 'POST',
+    });
+  },
 };

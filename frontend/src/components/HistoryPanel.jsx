@@ -25,16 +25,8 @@ export default function HistoryPanel({ refreshTrigger }) {
 
   const formatDate = (dateString) => {
     // SQLite returns dates in format: "2025-11-08 22:26:31" (local time, not UTC)
-    // We need to parse it correctly
+    // Parse and display exact date and time
     const date = new Date(dateString.replace(' ', 'T'));
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) return 'Przed chwilą';
-    if (diffMins < 60) return `${diffMins} min temu`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} godz. temu`;
-    if (diffMins < 10080) return `${Math.floor(diffMins / 1440)} dni temu`;
 
     return date.toLocaleString('pl-PL', {
       day: '2-digit',
@@ -42,6 +34,7 @@ export default function HistoryPanel({ refreshTrigger }) {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
     });
   };
 

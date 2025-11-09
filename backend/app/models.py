@@ -58,6 +58,8 @@ class ProductRecord(BaseModel):
     id: Optional[int] = None
     active_promotions: List[ActivePromotion] = Field(default_factory=list)
     created_at: Optional[str] = None
+    vendor: Optional[str] = None
+    product_type: Optional[str] = None
 
     class Config:
         use_enum_values = True
@@ -99,7 +101,9 @@ def db_row_to_product(row: dict, promotions: List[dict] = None) -> ProductRecord
         channel=row['channel'],
         active_promotion=active_promotion_text,
         active_promotions=promo_list,
-        created_at=row.get('created_at')
+        created_at=row.get('created_at'),
+        vendor=row.get('vendor'),
+        product_type=row.get('product_type')
     )
 
 

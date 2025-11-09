@@ -16,6 +16,7 @@ function App() {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [historyRefresh, setHistoryRefresh] = useState(0);
+  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -61,6 +62,30 @@ function App() {
     setHistoryRefresh(prev => prev + 1);
   };
 
+  const handleGenerateSuggestions = async () => {
+    setGeneratingSuggestions(true);
+    try {
+      const result = await api.generateSuggestionsForAll();
+      setNotification({
+        type: 'success',
+        title: 'Sugestie wygenerowane!',
+        message: `Przeanalizowano ${result.products_analyzed} produktów i utworzono ${result.total_suggestions_created} sugestii.`,
+      });
+      // Refresh to show new suggestions
+      if (selectedProduct) {
+        setSelectedProduct({ ...selectedProduct });
+      }
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        title: 'Błąd',
+        message: `Nie udało się wygenerować sugestii: ${err.message}`,
+      });
+    } finally {
+      setGeneratingSuggestions(false);
+    }
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -91,7 +116,19 @@ function App() {
         <>
           <div className="main-content">
             <div className="products-section">
-              <h2 className="section-title">Lista produktów</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 className="section-title" style={{ margin: 0 }}>Lista produktów</h2>
+                {products.length > 0 && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleGenerateSuggestions}
+                    disabled={generatingSuggestions}
+                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+                  >
+                    {generatingSuggestions ? '🔄 Generowanie...' : '🤖 Generuj sugestie AI'}
+                  </button>
+                )}
+              </div>
 
               {loading && <div className="loading">Ładowanie produktów</div>}
 

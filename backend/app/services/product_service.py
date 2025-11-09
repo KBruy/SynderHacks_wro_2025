@@ -25,6 +25,7 @@ def get_all_products() -> List[Dict]:
         cursor.execute('''
             SELECT
                 p.id, p.sku, p.name, p.price, p.stock, p.status, p.channel, p.created_at,
+                p.vendor, p.product_type,
                 s.id as applied_suggestion_id,
                 s.type as applied_suggestion_type,
                 s.description as applied_suggestion_desc

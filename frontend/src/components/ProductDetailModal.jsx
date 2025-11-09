@@ -37,18 +37,18 @@ export default function ProductDetailModal({ product, onClose }) {
     });
   };
 
-  const formatRelativeDate = (dateString) => {
+  const formatExactDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString.replace(' ', 'T'));
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
 
-    if (diffMins < 1) return 'Przed chwilą';
-    if (diffMins < 60) return `${diffMins} min temu`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} godz. temu`;
-    if (diffMins < 10080) return `${Math.floor(diffMins / 1440)} dni temu`;
-    return formatDate(dateString);
+    return date.toLocaleString('pl-PL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   };
 
   if (!product) return null;
@@ -127,7 +127,7 @@ export default function ProductDetailModal({ product, onClose }) {
                         {sug.type}
                       </span>
                       <span className="suggestion-desc">{sug.description}</span>
-                      <span className="suggestion-time">{formatRelativeDate(sug.applied_at)}</span>
+                      <span className="suggestion-time">{formatExactDate(sug.applied_at)}</span>
                     </div>
                   ))}
                 </div>
@@ -141,7 +141,7 @@ export default function ProductDetailModal({ product, onClose }) {
                 <div className="history-list">
                   {details.event_history.map((event) => (
                     <div key={event.id} className="history-item">
-                      <div className="history-time">{formatRelativeDate(event.created_at)}</div>
+                      <div className="history-time">{formatExactDate(event.created_at)}</div>
                       <div className="history-desc">{event.description}</div>
                     </div>
                   ))}

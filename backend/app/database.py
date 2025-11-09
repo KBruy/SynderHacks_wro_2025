@@ -164,13 +164,9 @@ def init_db():
         ''')
 
 def seed_data():
-    """Clear products and suggestions on startup - fresh start every time"""
+    """Initialize data on startup - no longer clearing products"""
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Clear all products (cascade will delete related suggestions and events)
-        cursor.execute('DELETE FROM products')
-        cursor.execute('DELETE FROM suggestions')
-        cursor.execute('DELETE FROM events WHERE product_id IS NOT NULL')
-
-        logger.info("Cleared all products and suggestions - ready for fresh sync from Shopify")
+        # No longer clearing products - data persists between restarts
+        logger.info("Database ready - products and connections persist between restarts")
