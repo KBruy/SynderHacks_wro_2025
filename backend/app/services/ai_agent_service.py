@@ -51,14 +51,34 @@ def analyze_product_with_ai(product: Dict, market_data: List[Dict], all_shop_pro
         Dict with analysis results and suggestions.
     """
     try:
+        # Check if product is out of stock
+        if product['stock'] <= 0:
+            logger.info(f"Product {product['id']} is out of stock, generating restock suggestion")
+            return {
+                "suggestions": [{
+                    "type": "restock",
+                    "description": f"Product '{product['name']}' is out of stock and needs to be restocked immediately to continue sales.",
+                    "reasoning": "This product has 0 units in inventory. Restocking is required before any pricing or promotional strategies can be implemented.",
+                    "product_ids": []
+                }],
+                "market_position": "Product is currently unavailable - restock needed"
+            }
+
         ai_client = _get_openai_client()
         model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
 
-        # Format shop products for prompt
+        # Filter shop products: only include products with stock > 0 for bundles/promos
+        available_products = [p for p in all_shop_products if p['id'] != product['id'] and p['stock'] > 0]
+
+        # Format shop products for prompt (only available ones)
         shop_products_text = "\n".join([
             f"- ID: {p['id']}, Name: {p['name']}, Price: {p['price']} PLN, Stock: {p['stock']} units"
-            for p in all_shop_products if p['id'] != product['id']
+            for p in available_products
         ])
+
+        # Check if there are available products for bundles/promos
+        if not available_products:
+            logger.warning(f"No available products in stock for bundles/promos for product {product['id']}")
 
         # Prepare prompt (all in English for consistency)
         prompt = f"""You are an e-commerce and pricing strategy expert.
@@ -69,8 +89,8 @@ PRODUCT TO ANALYZE (OUR SHOPIFY STORE):
 - Price: {product['price']} PLN
 - Stock: {product['stock']} units
 
-OTHER PRODUCTS IN OUR SHOPIFY STORE:
-{shop_products_text}
+AVAILABLE PRODUCTS IN OUR SHOPIFY STORE (with stock > 0):
+{shop_products_text if shop_products_text else "No other products currently in stock"}
 
 MARKET DATA FOR ANALYSIS (DummyJSON - for comparison only, NOT our products):
 {json.dumps(market_data[:5], indent=2, ensure_ascii=False)}
@@ -78,15 +98,17 @@ MARKET DATA FOR ANALYSIS (DummyJSON - for comparison only, NOT our products):
 TASK:
 Generate maximum 2-3 suggestions for product ID {product['id']}:
 1. Price optimization (price) - compare with market prices
-2. Promotion (promo) - combine with ANOTHER product from our store (provide its ID)
-3. Bundle (bundle) - combine 2-3 products from our store (provide their IDs)
+2. Promotion (promo) - combine with ANOTHER product from our store (provide its ID) - ONLY if other products are available
+3. Bundle (bundle) - combine 2-3 products from our store (provide their IDs) - ONLY if other products are available
 
 CRITICALLY IMPORTANT:
 - ALL suggestions concern ONLY products from our Shopify store!
-- In bundle/promo use ONLY IDs of products from "OTHER PRODUCTS IN OUR STORE" section
+- In bundle/promo use ONLY IDs from "AVAILABLE PRODUCTS IN OUR SHOPIFY STORE" section
+- ONLY use products that have stock > 0 (all listed products have stock available)
 - DO NOT use products from DummyJSON - that's only for market analysis!
 - Bundle must contain 2-3 products from our store (provide specific IDs)
 - Promo can combine 2 products (1+1, provide specific IDs)
+- If no other products are available, only suggest price optimization
 - Write ALL descriptions and reasoning in ENGLISH language!
 
 Respond ONLY in JSON format (all text in English):

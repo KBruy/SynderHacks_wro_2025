@@ -64,6 +64,7 @@ export default function SuggestionsPanel({ product, onApplied }) {
       price: t('suggestionTypePrice'),
       promo: t('suggestionTypePromo'),
       bundle: t('suggestionTypeBundle'),
+      restock: t('suggestionTypeRestock'),
     };
     return labels[type] || type;
   };

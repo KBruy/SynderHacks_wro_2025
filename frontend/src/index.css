@@ -195,6 +195,11 @@ body {
   color: #2e7d32;
 }
 
+.suggestion-badge.restock {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
 .stock-indicator {
   font-weight: 600;
   color: #2e7d32;

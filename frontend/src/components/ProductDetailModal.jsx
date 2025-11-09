@@ -125,10 +125,12 @@ export default function ProductDetailModal({ product, onClose }) {
                         {sug.type === 'price' && '💰'}
                         {sug.type === 'promo' && '🎉'}
                         {sug.type === 'bundle' && '📦'}
+                        {sug.type === 'restock' && '📥'}
                         {' '}
                         {sug.type === 'price' && t('suggestionTypePrice')}
                         {sug.type === 'promo' && t('suggestionTypePromo')}
                         {sug.type === 'bundle' && t('suggestionTypeBundle')}
+                        {sug.type === 'restock' && t('suggestionTypeRestock')}
                       </span>
                       <span className="suggestion-desc">{sug.description}</span>
                       <span className="suggestion-time">{formatExactDate(sug.applied_at)}</span>
