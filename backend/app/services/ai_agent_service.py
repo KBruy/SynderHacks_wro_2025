@@ -26,7 +26,15 @@ def _get_openai_client():
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OPENAI_API_KEY not set in environment variables")
-        client = OpenAI(api_key=api_key)
+        try:
+            logger.info("Initializing OpenAI client...")
+            client = OpenAI(api_key=api_key)
+            logger.info("OpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"OpenAI client initialization failed: {type(e).__name__}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
     return client
 
 
