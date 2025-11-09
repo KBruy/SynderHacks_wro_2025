@@ -9,31 +9,205 @@
 
 ---
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [Our Solution](#our-solution)
+- [How It Works](#how-it-works)
+- [Technical Architecture](#technical-architecture)
+- [Quick Start](#quick-start)
+- [Usage Workflow](#usage-workflow)
+- [Development](#development)
+
+---
+
 ## The Problem
 
-E-commerce retailers face three critical challenges:
+E-commerce retailers face three critical challenges that directly impact their bottom line:
 
-1. **Pricing Optimization**: Determining optimal product prices requires constant market analysis and competitor monitoring
-2. **Promotion Timing**: Knowing when and how to discount products to maximize sales without eroding margins
-3. **Product Bundling**: Identifying which products should be bundled together to increase average order value
+### 1. **Pricing Optimization**
+Determining optimal product prices requires constant market analysis and competitor monitoring. Questions arise daily:
+- Is this product priced too high, leaving money on the table?
+- Is it priced too low, eroding profit margins?
+- Should prices be adjusted based on current inventory levels?
 
-Manual management of these tasks is time-consuming, error-prone, and often misses revenue opportunities. Small to medium-sized retailers lack the resources for sophisticated pricing algorithms and data analysis teams.
+### 2. **Promotion Timing**
+Knowing when and how to discount products to maximize sales without eroding margins is an art and science:
+- Which products should be promoted to move slow-moving inventory?
+- What discount percentage will drive sales without training customers to wait for deals?
+- How do seasonal trends affect promotion effectiveness?
+
+### 3. **Product Bundling**
+Identifying which products should be bundled together to increase average order value:
+- Which product combinations make logical sense to customers?
+- How should bundles be priced to be attractive while maintaining margins?
+- Which bundles will actually sell vs. just cluttering the catalog?
+
+
+### The Reality for SMB Retailers
+
+Manual management of these tasks is:
+- **Time-consuming**: Hours spent analyzing spreadsheets and market data
+- **Error-prone**: Human judgment can miss patterns in sales data
+- **Reactive**: Decisions made after problems occur, not proactively
+- **Resource-intensive**: Small to medium-sized retailers lack dedicated pricing analysts or data science teams
+
+**The result?** Missed revenue opportunities, stagnant inventory, and sub-optimal profit margins.
+
+---
 
 ## Our Solution
 
-**Smart Product Optimization Manager** is an intelligent platform that automatically generates actionable recommendations for:
+**Smart Product Optimization Manager** is an intelligent platform that acts as your virtual pricing analyst and e-commerce strategist. It continuously monitors your product catalog and automatically generates actionable recommendations.
 
-- **Dynamic Pricing**: AI-driven price adjustments based on inventory levels, sales velocity, and market positioning
-- **Smart Promotions**: Targeted discount suggestions to move slow-moving inventory or capitalize on trending products
-- **Bundle Creation**: Automated detection of product synergies to create attractive bundles that increase cart value
+### What Makes It Different?
+
+Unlike traditional analytics dashboards that just show you data, our platform:
+1. **Analyzes** your product performance metrics
+2. **Generates** specific, actionable suggestions
+3. **Applies** changes with one click
+4. **Tracks** the results of each optimization
+
+### Core Capabilities
+
+#### **Dynamic Pricing**
+AI-driven price adjustments based on:
+- **Inventory levels**: Suggest price increases for low-stock high-demand items
+- **Sales velocity**: Identify products that can support higher prices
+- **Stock clearance**: Recommend strategic discounts to move excess inventory
+- **Competitive positioning**: Optimize prices for market competitiveness
+
+**Example**: "Product X has only 5 units left but sold 20 in the past week. Suggestion: Increase price by 15% to maximize revenue on remaining stock."
+
+#### **Smart Promotions**
+Targeted discount suggestions that:
+- **Move slow inventory**: Identify products sitting in warehouse for 60+ days
+- **Capitalize on trends**: Suggest promotions for products with increasing search interest
+- **Prevent stockouts**: Recommend discounts when overstocked
+- **Seasonal optimization**: Time promotions to align with buying patterns
+
+**Example**: "Product Y hasn't sold in 45 days and has 30 units in stock. Suggestion: Run a 20% off promotion for 2 weeks to clear inventory."
+
+#### **Bundle Creation**
+Automated detection of product synergies:
+- **Complementary products**: Find items frequently viewed together
+- **Margin optimization**: Bundle slow-moving items with bestsellers
+- **Value perception**: Create bundles that feel like a deal while maintaining profits
+- **Cross-category bundling**: Combine products to increase basket size
+
+**Example**: "Gaming Mouse + Mouse Pad are often purchased together. Suggestion: Create 'Gaming Combo' bundle at $45 (individual total: $52) to increase AOV."
 
 ### Key Features
-
-- **Multi-Channel Integration**: Connects to WooCommerce and Shopify stores via secure API
-- **One-Click Application**: Apply optimization suggestions with a single click
+- **One-Click Application**: Apply optimization suggestions instantly without manual data entry
 - **Real-Time Analytics**: Track the impact of applied suggestions through comprehensive event history
-- **Demo Mode**: Test the platform without connecting real stores
-- **Encrypted Credentials**: Bank-grade AES encryption for API keys and secrets
+- **Demo Mode**: Test the platform with realistic data without connecting real stores
+- **Non-Destructive**: All changes are tracked and can be monitored through detailed audit logs
+- **Platform Agnostic**: Works with any WooCommerce or Shopify store out of the box
+
+---
+
+## How It Works
+
+### The Complete Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    1. CONNECT YOUR STORE                        │
+│  Securely link WooCommerce/Shopify via API (credentials encrypted)│
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    2. SYNC PRODUCTS                             │
+│  Platform imports all products, prices, stock levels, metadata  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  3. AI ANALYSIS ENGINE                          │
+│  • Analyzes product performance metrics                         │
+│  • Identifies optimization opportunities                        │
+│  • Generates specific, actionable suggestions                   │
+│  • Categorizes by type: Price / Promo / Bundle                  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  4. REVIEW SUGGESTIONS                          │
+│  Dashboard shows all suggestions with:                          │
+│  • Clear description of the recommendation                      │
+│  • Expected impact on revenue/inventory                         │
+│  • One-click "Apply" button                                     │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  5. APPLY OPTIMIZATION                          │
+│  Single click triggers:                                         │
+│  • Price updates pushed to e-commerce platform                  │
+│  • Promotion campaigns created                                  │
+│  • Bundle products generated with SKUs                          │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  6. TRACK RESULTS                               │
+│  • Complete audit trail of all changes                          │
+│  • Event history with timestamps                                │
+│  • Before/after comparison                                      │
+│  • Active promotions displayed on dashboard                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Technical Flow
+
+For technical evaluators, here's how the system processes a suggestion:
+
+1. **Product Sync** (`POST /api/connections/:id/sync`)
+   ```
+   Platform API → Flask Backend → SQLite Database
+   • Fetches products from WooCommerce/Shopify
+   • Normalizes data across platforms
+   • Stores in local database for analysis
+   ```
+
+2. **Suggestion Generation** (Automatic)
+   ```
+   Algorithm analyzes:
+   • Stock levels (high/low thresholds)
+   • Price points (below/above category average)
+   • Sales velocity indicators
+   • Product relationships (frequently viewed together)
+
+   Generates suggestions with:
+   • Type classification (price/promo/bundle)
+   • Specific recommendation text
+   • Expected new values
+   ```
+
+3. **Suggestion Application** (`POST /api/suggestions/:id/apply`)
+   ```
+   Frontend → Backend → Decision Logic:
+
+   IF type == "price":
+     • Parse new price from description (regex)
+     • Update local database
+     • Push to e-commerce platform API
+     • Create event log entry
+
+   IF type == "promo":
+     • Mark product as "on promotion"
+     • Store discount details
+     • Display in "Active Promotions" section
+     • Create event log entry
+
+   IF type == "bundle":
+     • Create new bundle product
+     • Link component products (many-to-many)
+     • Calculate bundle pricing
+     • Generate unique SKU
+     • Create event log entry
+   ```
 
 ---
 
@@ -64,7 +238,6 @@ Manual management of these tasks is time-consuming, error-prone, and often misse
   - CORS protection
   - Input validation and sanitization
 - **External Integrations**:
-  - WooCommerce REST API v3
   - Shopify Admin API 2024-01
   - Mock integration for testing without real stores
 
@@ -80,147 +253,6 @@ Manual management of these tasks is time-consuming, error-prone, and often misse
 - **Data Persistence**: Named volume for SQLite database
 - **Networking**: Internal Docker network with exposed ports
 
-### Database Schema
-
-```sql
--- Core product data from connected stores
-products (
-  id INTEGER PRIMARY KEY,
-  sku TEXT,
-  name TEXT,
-  price REAL,
-  stock INTEGER,
-  status TEXT,
-  channel TEXT,
-  connection_id INTEGER,
-  external_id TEXT,
-  created_at TEXT,
-  updated_at TEXT,
-  FOREIGN KEY (connection_id) REFERENCES store_connections(id)
-)
-
--- AI-generated optimization suggestions
-suggestions (
-  id INTEGER PRIMARY KEY,
-  product_id INTEGER,
-  type TEXT CHECK(type IN ('price', 'promo', 'bundle')),
-  description TEXT,
-  status TEXT CHECK(status IN ('new', 'applied')),
-  applied_at TEXT,
-  FOREIGN KEY (product_id) REFERENCES products(id)
-)
-
--- Product bundle definitions
-bundles (
-  id INTEGER PRIMARY KEY,
-  name TEXT,
-  sku TEXT UNIQUE,
-  price REAL,
-  channel TEXT,
-  connection_id INTEGER,
-  is_active BOOLEAN DEFAULT 1
-)
-
--- Bundle composition (many-to-many)
-bundle_items (
-  id INTEGER PRIMARY KEY,
-  bundle_id INTEGER,
-  product_id INTEGER,
-  quantity INTEGER,
-  FOREIGN KEY (bundle_id) REFERENCES bundles(id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
-)
-
--- Audit trail for all actions
-events (
-  id INTEGER PRIMARY KEY,
-  product_id INTEGER,
-  suggestion_id INTEGER,
-  event_type TEXT,
-  description TEXT,
-  created_at TEXT
-)
-
--- Store connection credentials (encrypted)
-store_connections (
-  id INTEGER PRIMARY KEY,
-  name TEXT,
-  platform TEXT CHECK(platform IN ('woocommerce', 'shopify')),
-  store_url TEXT,
-  api_key_encrypted TEXT,
-  api_secret_encrypted TEXT,
-  is_active BOOLEAN DEFAULT 1
-)
-```
-
-### API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Service health check |
-| `GET` | `/api/products` | List all products with active promotions |
-| `GET` | `/api/products/:id` | Get single product details |
-| `GET` | `/api/suggestions?product_id=ID` | Get suggestions for specific product |
-| `POST` | `/api/suggestions/:id/apply` | Apply suggestion (updates product or creates bundle) |
-| `GET` | `/api/events` | Event history (last 20 actions) |
-| `GET` | `/api/connections` | List store connections |
-| `POST` | `/api/connections` | Create new store connection |
-| `POST` | `/api/connections/:id/sync` | Sync products from store |
-| `POST` | `/api/connections/demo/quick-setup` | Create demo stores for testing |
-| `DELETE` | `/api/connections/:id` | Remove store connection |
-
-### Key Technical Innovations
-
-#### 1. Intelligent Price Parsing
-The system uses regex pattern matching to extract pricing information from natural language suggestions:
-
-```python
-# Pattern 1: "Increase price to 169.99"
-match = re.search(r'to\s+(\d+\.?\d*)', description)
-
-# Pattern 2: "Reduce price by 15%"
-match = re.search(r'by\s+(\d+)%', description)
-```
-
-#### 2. Timestamp Consistency
-Custom timestamp handling to avoid UTC/local timezone conflicts:
-
-```python
-# Backend: Explicit local time
-now = datetime.now().isoformat(sep=' ', timespec='seconds')
-
-# Frontend: SQLite format to ISO conversion
-const date = new Date(dateString.replace(' ', 'T'));
-```
-
-#### 3. Secure Credential Management
-Multi-layer encryption for API credentials:
-
-```python
-# Key derivation from master password
-kdf = PBKDF2HMAC(
-    algorithm=hashes.SHA256(),
-    length=32,
-    salt=salt,
-    iterations=100000,
-)
-
-# AES-256 encryption
-cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
-```
-
-#### 4. Auto-Refresh Architecture
-Smart UI updates after suggestion application:
-
-```javascript
-const handleSuggestionApplied = (notificationData) => {
-  setNotification(notificationData);
-  loadProducts();  // Refresh product list
-  setHistoryRefresh(prev => prev + 1);  // Trigger event history reload
-};
-```
-
----
 
 ## Quick Start
 
@@ -250,43 +282,6 @@ The application will be available at:
 ### Production Setup with Real Stores
 
 See [STORE_API_SETUP.md](STORE_API_SETUP.md) for detailed instructions on connecting WooCommerce or Shopify stores.
-
----
-
-## Usage Workflow
-
-### 1. Connect Your Store
-```bash
-POST /api/connections
-{
-  "name": "My WooCommerce Store",
-  "platform": "woocommerce",
-  "store_url": "https://mystore.com",
-  "api_key": "ck_...",
-  "api_secret": "cs_..."
-}
-```
-
-### 2. Sync Products
-```bash
-POST /api/connections/:id/sync
-```
-Imports products from your store and generates initial optimization suggestions.
-
-### 3. Review Suggestions
-The platform automatically generates suggestions categorized as:
-- **Price**: Optimize pricing for maximum revenue
-- **Promo**: Create targeted promotions
-- **Bundle**: Group complementary products
-
-### 4. Apply Optimizations
-One-click application of suggestions:
-- Updates product prices in real-time
-- Creates promotional campaigns
-- Generates bundle products
-
-### 5. Track Results
-Monitor all changes through the event history dashboard.
 
 ---
 
@@ -336,24 +331,6 @@ Monitor all changes through the event history dashboard.
 
 ---
 
-## Performance & Scalability
-
-- **API Response Time**: < 300ms for all endpoints
-- **Database**: SQLite with WAL mode for concurrent reads
-- **Frontend Bundle**: < 200KB gzipped
-- **Docker Image Size**: Backend ~150MB, Frontend ~25MB
-- **Memory Footprint**: < 100MB per container
-
-### Scalability Considerations
-
-Current implementation is optimized for **small to medium retailers** (1-10K products). For larger catalogs:
-
-1. Migrate to PostgreSQL or MySQL
-2. Implement Redis caching layer
-3. Add background job queue (Celery/RQ) for async processing
-4. Scale horizontally with load balancer
-
----
 
 ## Testing
 
@@ -387,83 +364,6 @@ curl http://localhost:5001/api/products
 curl http://localhost:5001/api/suggestions?product_id=1
 ```
 
----
-
-## Troubleshooting
-
-### Backend won't start
-```bash
-# Check logs
-docker-compose logs backend
-
-# Verify port 5001 is available
-netstat -an | grep 5001
-```
-
-### Frontend can't connect to API
-```bash
-# Check environment variable
-cat Frontend/.env
-# Should contain: VITE_API_URL=http://localhost:5001
-```
-
-### Database corruption
-```bash
-# Reset everything
-docker-compose down -v
-docker-compose up
-```
-
-### Port conflicts
-Edit `docker-compose.yml` to change exposed ports:
-```yaml
-services:
-  backend:
-    ports:
-      - "5001:5001"  # Change first number (host port)
-```
-
----
-
-## Development
-
-### Local Development (Without Docker)
-
-#### Backend
-```bash
-cd Backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app/main.py
-```
-
-#### Frontend
-```bash
-cd Frontend
-npm install
-npm run dev
-```
-
-### Building for Production
-```bash
-# Frontend
-cd Frontend
-npm run build
-# Output: dist/
-
-# Backend (Docker)
-cd Backend
-docker build -t product-optimizer-backend .
-```
-
----
-
-## License
-
-MIT License
-
----
 
 ## Team
 
@@ -473,11 +373,6 @@ Developed during SynderHacks Wrocław 2025
 
 ---
 
-Built with heart and detetrmination
-
----
-
 **Last Updated**: November 2025
 **Status**: MVP Complete, Bundle System in Development
 **Version**: 1.0.0
-
