@@ -76,7 +76,7 @@ def sync_connection(connection_id: int) -> Dict:
     return {
         'success': True,
         'products_synced': products_synced,
-        'message': f'Zsynchronizowano {products_synced} produktów'
+        'message': f'Synchronized {products_synced} products'
     }
 
 
@@ -244,7 +244,7 @@ def _log_successful_sync(cursor, connection_id: int, products_synced: int, conne
     cursor.execute('''
         INSERT INTO events (event_type, description)
         VALUES ('products_synced', ?)
-    ''', (f"Zsynchronizowano {products_synced} produktów z {connection_name}",))
+    ''', (f"Synchronized {products_synced} products from {connection_name}",))
 
 
 def _log_failed_sync(connection_id: int, error_message: str) -> None:

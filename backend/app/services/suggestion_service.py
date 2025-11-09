@@ -121,20 +121,20 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                     WHERE id = ?
                 ''', (new_price, now, suggestion['product_id']))
                 logger.info(f"Updated product {suggestion['product_id']} price to {new_price} in database")
-                applied_actions.append(f"Zmieniono cenę na {new_price} PLN w bazie danych")
+                applied_actions.append(f"Changed price to {new_price} PLN in database")
 
                 # Update in Shopify/WooCommerce
                 if integration and suggestion['external_id']:
                     try:
                         if integration.update_product_price(suggestion['external_id'], new_price):
                             logger.info(f"Updated product {suggestion['external_id']} price to {new_price} in {suggestion['channel']}")
-                            applied_actions.append(f"Zmieniono cenę na {new_price} PLN w sklepie {suggestion['channel']}")
+                            applied_actions.append(f"Changed price to {new_price} PLN in {suggestion['channel']} store")
                         else:
                             logger.error(f"Failed to update price in {suggestion['channel']}")
-                            applied_actions.append(f"BŁĄD: Nie udało się zmienić ceny w sklepie {suggestion['channel']}")
+                            applied_actions.append(f"ERROR: Failed to change price in {suggestion['channel']} store")
                     except Exception as e:
                         logger.error(f"Error updating price in store: {e}")
-                        applied_actions.append(f"BŁĄD: {str(e)}")
+                        applied_actions.append(f"ERROR: {str(e)}")
 
         elif suggestion['type'] == 'promo':
             # Promo: Create new product (1+1), reduce stock of originals
@@ -154,10 +154,10 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                     invalid_products = [p for p in products_to_combine if p.get('product_type') in ['bundle', 'promotion', 'Zestaw', 'Promocja']]
                     if invalid_products:
                         invalid_names = ', '.join([p['name'] for p in invalid_products])
-                        applied_actions.append(f"BŁĄD: Nie można tworzyć promki z bundli lub innych promek: {invalid_names}")
+                        applied_actions.append(f"ERROR: Cannot create promo from bundles or other promos: {invalid_names}")
                         logger.warning(f"Cannot create promo from bundles/promos: {invalid_names}")
                     elif len(products_to_combine) < 2:
-                        applied_actions.append("BŁĄD: Nie znaleziono wszystkich produktów do promo")
+                        applied_actions.append("ERROR: Not all products found for promo")
                     else:
                         # Create promo product name and price
                         promo_name = f"PROMO 1+1: {products_to_combine[0]['name']} + {products_to_combine[1]['name']}"
@@ -207,16 +207,16 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                                 cursor.execute('UPDATE products SET stock = 0, status = ? WHERE id = ?',
                                              ('promo_used', prod['id']))
 
-                            applied_actions.append(f"Utworzono produkt PROMO: {promo_name} ({promo_price} PLN)")
-                            applied_actions.append(f"Promo zapisane w bazie danych (ID: {promo_product_id})")
-                            applied_actions.append(f"Zmniejszono stan produktów: {', '.join([p['name'] for p in products_to_combine])}")
+                            applied_actions.append(f"Created PROMO product: {promo_name} ({promo_price} PLN)")
+                            applied_actions.append(f"Promo saved in database (ID: {promo_product_id})")
+                            applied_actions.append(f"Reduced stock of products: {', '.join([p['name'] for p in products_to_combine])}")
                         else:
-                            applied_actions.append("BŁĄD: Nie udało się utworzyć produktu promo")
+                            applied_actions.append("ERROR: Failed to create promo product")
                 except Exception as e:
                     logger.error(f"Error creating promo product: {e}")
-                    applied_actions.append(f"BŁĄD: {str(e)}")
+                    applied_actions.append(f"ERROR: {str(e)}")
             else:
-                applied_actions.append("Sugestia promocyjna zapisana - brak powiązanych produktów")
+                applied_actions.append("Promo suggestion saved - no related products")
 
         elif suggestion['type'] == 'bundle':
             # Bundle: Create new product (2-3 items), reduce stock of originals
@@ -236,10 +236,10 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                     invalid_products = [p for p in products_to_bundle if p.get('product_type') in ['bundle', 'promotion', 'Zestaw', 'Promocja']]
                     if invalid_products:
                         invalid_names = ', '.join([p['name'] for p in invalid_products])
-                        applied_actions.append(f"BŁĄD: Nie można tworzyć bundla z bundli lub promek: {invalid_names}")
+                        applied_actions.append(f"ERROR: Cannot create bundle from bundles or promos: {invalid_names}")
                         logger.warning(f"Cannot create bundle from bundles/promos: {invalid_names}")
                     elif len(products_to_bundle) < 2:
-                        applied_actions.append("BŁĄD: Nie znaleziono wszystkich produktów do bundle")
+                        applied_actions.append("ERROR: Not all products found for bundle")
                     else:
                         # Create bundle product name and price (10% discount)
                         bundle_name = f"BUNDLE: " + " + ".join([p['name'] for p in products_to_bundle])
@@ -289,21 +289,21 @@ def apply_suggestion(suggestion_id: int) -> Dict:
                                 cursor.execute('UPDATE products SET stock = 0, status = ? WHERE id = ?',
                                              ('bundled', prod['id']))
 
-                            applied_actions.append(f"Utworzono BUNDLE: {bundle_name[:50]}... ({bundle_price:.2f} PLN)")
-                            applied_actions.append(f"Bundle zapisany w bazie danych (ID: {bundle_product_id})")
-                            applied_actions.append(f"Zmniejszono stan {len(products_to_bundle)} produktów")
+                            applied_actions.append(f"Created BUNDLE: {bundle_name[:50]}... ({bundle_price:.2f} PLN)")
+                            applied_actions.append(f"Bundle saved in database (ID: {bundle_product_id})")
+                            applied_actions.append(f"Reduced stock of {len(products_to_bundle)} products")
                         else:
-                            applied_actions.append("BŁĄD: Nie udało się utworzyć bundle")
+                            applied_actions.append("ERROR: Failed to create bundle")
                 except Exception as e:
                     logger.error(f"Error creating bundle: {e}")
-                    applied_actions.append(f"BŁĄD: {str(e)}")
+                    applied_actions.append(f"ERROR: {str(e)}")
             else:
-                applied_actions.append("Sugestia bundle zapisana - brak powiązanych produktów")
+                applied_actions.append("Bundle suggestion saved - no related products")
 
         # Create event in history
-        actions_text = "; ".join(applied_actions) if applied_actions else "Sugestia zastosowana"
+        actions_text = "; ".join(applied_actions) if applied_actions else "Suggestion applied"
         event_description = (
-            f"Zastosowano sugestię [{suggestion['type']}] dla produktu "
+            f"Applied suggestion [{suggestion['type']}] for product "
             f"'{suggestion['product_name']}': {actions_text}"
         )
         cursor.execute('''
@@ -317,7 +317,7 @@ def apply_suggestion(suggestion_id: int) -> Dict:
 
     return {
         'success': True,
-        'message': 'Sugestia została pomyślnie zastosowana',
+        'message': 'Suggestion successfully applied',
         'suggestion_id': suggestion_id,
         'event_id': event_id,
         'applied_at': now,

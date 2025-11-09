@@ -212,7 +212,7 @@ def create_product_in_store(data: Dict) -> Dict:
         cursor.execute('''
             INSERT INTO events (product_id, event_type, description, created_at)
             VALUES (?, 'product_created', ?, ?)
-        ''', (product_id, f"Utworzono produkt: {created_product['name']}", now))
+        ''', (product_id, f"Created product: {created_product['name']}", now))
 
     logger.info(f"Created product {product_id}: {created_product['name']} in {platform}")
 
@@ -223,7 +223,7 @@ def create_product_in_store(data: Dict) -> Dict:
         'name': created_product['name'],
         'price': created_product['price'],
         'stock': created_product['stock'],
-        'message': f'Produkt został utworzony w sklepie {platform}'
+        'message': f'Product created in {platform} store'
     }
 
 

@@ -110,18 +110,20 @@ CRITICALLY IMPORTANT:
 - Promo can combine 2 products (1+1, provide specific IDs)
 - If no other products are available, only suggest price optimization
 - Write ALL descriptions and reasoning in ENGLISH language!
+- Keep descriptions CONCISE (max 60 characters) - only key details
+- Keep reasoning SHORT (max 80 characters) - be direct
 
 Respond ONLY in JSON format (all text in English):
 {{
   "suggestions": [
     {{
       "type": "price|promo|bundle",
-      "description": "Specific suggestion with values and product IDs from OUR store (in English)",
-      "reasoning": "Business justification (in English)",
+      "description": "CONCISE action (max 60 chars)",
+      "reasoning": "SHORT reason (max 80 chars)",
       "product_ids": [list of product IDs from our store, if bundle/promo]
     }}
   ],
-  "market_position": "Market position analysis (in English)"
+  "market_position": "Brief analysis (max 120 chars)"
 }}"""
 
         # Call OpenAI
@@ -146,7 +148,7 @@ Respond ONLY in JSON format (all text in English):
         logger.error(f"AI analysis failed for product {product['id']}: {e}")
         return {
             "suggestions": [],
-            "market_position": "Analiza AI niedostępna",
+            "market_position": "AI analysis unavailable",
             "error": str(e)
         }
 
@@ -243,7 +245,7 @@ def generate_suggestions_for_product(product_id: int) -> Dict:
             VALUES (?, 'ai_analysis', ?)
         ''', (
             product_id,
-            f"AI Agent wygenerował {suggestions_created} sugestii. {analysis.get('market_position', '')}"
+            f"AI Agent generated {suggestions_created} suggestions. {analysis.get('market_position', '')}"
         ))
 
         logger.info(f"Created {suggestions_created} AI suggestions for product {product_id}")
