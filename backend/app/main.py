@@ -20,6 +20,8 @@ from services import (
     toggle_connection,
     quick_demo_setup,
     sync_connection,
+    generate_suggestions_for_product,
+    generate_suggestions_for_all_products,
 )
 
 # Configure logging
@@ -348,6 +350,50 @@ def api_quick_demo_setup():
         }), 201
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+
+
+# ========== AI Agent Endpoints ==========
+
+@app.route('/api/ai/analyze/<int:product_id>', methods=['POST'])
+def api_ai_analyze_product(product_id: int):
+    """
+    Generate AI-powered suggestions for a specific product.
+
+    Uses OpenAI to analyze the product against market data from DummyJSON.
+
+    Args:
+        product_id: Product ID from URL path.
+
+    Returns:
+        JSON with analysis results and created suggestions.
+    """
+    try:
+        result = generate_suggestions_for_product(product_id)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        logger.error(f"AI analysis failed for product {product_id}: {e}")
+        return jsonify({'error': f'AI analysis failed: {str(e)}'}), 500
+
+
+@app.route('/api/ai/analyze-all', methods=['POST'])
+def api_ai_analyze_all():
+    """
+    Generate AI-powered suggestions for all products.
+
+    Analyzes all products in the database and generates suggestions
+    based on market data from DummyJSON.
+
+    Returns:
+        JSON with summary of analysis results.
+    """
+    try:
+        result = generate_suggestions_for_all_products()
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Bulk AI analysis failed: {e}")
+        return jsonify({'error': f'AI analysis failed: {str(e)}'}), 500
 
 
 # ========== Main Entry Point ==========

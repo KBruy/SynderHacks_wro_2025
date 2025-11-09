@@ -10,6 +10,10 @@ from .connection_service import (
     quick_demo_setup
 )
 from .sync_service import sync_connection
+from .ai_agent_service import (
+    generate_suggestions_for_product,
+    generate_suggestions_for_all_products
+)
 
 __all__ = [
     # Product services
@@ -28,4 +32,7 @@ __all__ = [
     'quick_demo_setup',
     # Sync services
     'sync_connection',
+    # AI Agent services
+    'generate_suggestions_for_product',
+    'generate_suggestions_for_all_products',
 ]
