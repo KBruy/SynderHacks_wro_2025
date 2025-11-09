@@ -50,11 +50,21 @@ class ShopifyIntegration(StoreIntegration):
         for product in result['products']:
             # Shopify products can have multiple variants
             for variant in product.get('variants', []):
+                variant_id = variant.get('id')
+                if not variant_id:
+                    continue
+
+                # Use SKU if available, otherwise generate one
+                sku = variant.get('sku')
+                if not sku or sku.strip() == '':
+                    sku = f"SHOPIFY-{variant_id}"
+
                 products.append({
-                    'external_id': str(variant['id']),
-                    'sku': variant.get('sku', f"SHOPIFY-{variant['id']}"),
-                    'name': f"{product['title']} - {variant['title']}" if variant['title'] != 'Default Title' else product['title'],
+                    'external_id': str(variant_id),
+                    'sku': sku,
+                    'name': f"{product['title']} - {variant['title']}" if variant.get('title') != 'Default Title' else product['title'],
                     'price': float(variant.get('price', 0)),
+                    'stock': int(variant.get('inventory_quantity', 0)),
                     'status': 'active' if variant.get('inventory_quantity', 0) > 0 else 'low_stock',
                     'channel': 'shopify'
                 })

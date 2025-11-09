@@ -6,6 +6,8 @@ services:
     container_name: product-suggestions-backend
     ports:
       - "5001:5000"
+    env_file:
+      - ./backend/.env
     volumes:
       - sqlite-data:/data
     networks:
