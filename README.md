@@ -196,3 +196,5 @@ docker-compose logs -f frontend
 ## Licencja
 
 MIT
+
+
